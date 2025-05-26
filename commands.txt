@@ -1,0 +1,306 @@
+Okay, here is the comprehensive PRD outline organized into a series of commands you can give to an AI to generate the document section by section.
+
+Command 1: Start Document and Header
+Generate a document titled "Product Requirements Document (PRD): rwanly Core ERP".
+Include the following header information:
+Document Version: 1.0
+Date: 25/05/2025
+Authors: Jean Pierre niyogisubizo
+Project Phase: MVP (Minimum Viable Product) - Focusing on Core Modules
+
+Command 2: Generate Section 1: Introduction
+Generate Section 1: Introduction.
+Include the following sub-sections and content:
+
+1.1 Project Name: rwanly
+
+1.2 Product Description: rwanly is a web-based business management application designed to provide core ERP functionality, inspired by Sage Evolution's established workflows. It aims to offer a user-friendly, scalable solution for Small to Medium Businesses (SMBs).
+
+1.3 Purpose of this Document: This document defines the requirements for the initial phase of the rwanly project, focusing on the foundational Accounting, Inventory, and Sales (Order Entry) modules. It outlines the goals, scope, user stories, and functional/non-functional requirements to guide the development team.
+
+1.4 Alignment with Sage Evolution Documentation: This PRD draws heavily on the provided Sage Evolution System Requirements, Installation Guide, User Guide Table of Contents, Software License Agreement, and Data Protection documents to understand core functionalities and workflows. It does not aim to replicate Sage's specific UI or underlying code, but rather to build equivalent functionality in a web environment.
+
+Command 3: Generate Section 2: Goals
+Generate Section 2: Goals.
+Include the following sub-sections and content:
+
+2.1 Primary Goal: To develop a stable and functional web application providing core business management capabilities for SMBs.
+
+2.2 Key Objectives:
+
+Enable users to manage their financial records through General Ledger, Accounts Receivable, and Accounts Payable.
+
+Provide comprehensive tracking and management of inventory items.
+
+Facilitate the core sales and purchasing processes through Order Entry documents.
+
+Ensure data integrity and flow between the interconnected modules (Inventory, OE, AR, AP, GL).
+
+Implement a robust and flexible role-based access control system.
+
+Adhere to key data protection principles, including secure access and logging, as inspired by the Sage Data Protection document.
+
+Deliver a responsive and intuitive web user interface accessible from modern browsers.
+
+Command 4: Generate Section 3: Target Audience
+Generate Section 3: Target Audience.
+Include the following content:
+
+Small to Medium Businesses requiring integrated accounting and inventory management.
+Users in roles such as:
+
+Company Administrators / System Managers
+
+Accountants / Bookkeepers
+
+Sales Personnel
+
+Purchasing Personnel
+
+Warehouse Staff
+
+General Clerks entering data.
+
+Command 5: Generate Section 4: Scope - In Scope for MVP
+Generate Section 4.1: In Scope for MVP.
+Include the following main points and their sub-points:
+
+System Core:
+
+User/Agent Management (Create, Edit, Assign Roles)
+
+Role-Based Access Control (RBAC) at the Module/Functionality Level (inspired by Sage's Agent Groups and Access Control concepts)
+
+Company Setup & Configuration (Basic company details, connection to database)
+
+Accounting Periods Management (Define periods, Open/Close periods)
+
+Basic System Configuration Defaults (e.g., Numbering for documents/accounts)
+
+Master File Management (Create, Edit, Basic Inquiry/Listing) for Accounts, Customers, Suppliers, Inventory Items, Transaction Types, Accounting Periods, User Roles.
+
+Basic Reporting framework and generation (listing and summary reports for in-scope modules).
+
+General Ledger (GL):
+
+Chart of Accounts Management (Create, Edit, Define Account Types - Assets, Liabilities, Equity, Income, Expense)
+
+Manual Journal Entry Processing (Create, Post, Link to Accounts, Date, Reference)
+
+Basic GL Reports (Trial Balance, Account Listing)
+
+Accounts Receivable (AR):
+
+Customer Master File Management (Basic details - Name, Address, Contact Info, Default Terms, Ageing)
+
+Transaction Types Configuration (Define AR transaction types, link to GL Accounts)
+
+Transaction Processing (Posting customer invoices/credit notes/payments, capturing Date, Reference, Amount, Account) - Note: Initial focus is on manual posting or linked from OE, not necessarily complex batch import.
+
+Transaction Allocation (Allocate payments/credits to invoices)
+
+Ageing Periods Definition & Calculation
+
+Basic AR Reports (Customer Ageing, Customer Listing, Transaction Listing)
+
+Accounts Payable (AP):
+
+Supplier Master File Management (Basic details - Name, Address, Contact Info, Default Terms, Ageing)
+
+Transaction Types Configuration (Define AP transaction types, link to GL Accounts)
+
+Transaction Processing (Posting supplier invoices/credit notes/payments, capturing Date, Reference, Amount, Account) - Note: Initial focus is on manual posting or linked from OE, not necessarily complex batch import.
+
+Transaction Allocation (Allocate payments/credits to invoices)
+
+Ageing Periods Definition & Calculation (Can share setup with AR where applicable)
+
+Basic AP Reports (Supplier Ageing, Supplier Listing, Transaction Listing)
+
+Inventory:
+
+Inventory Item Master File Management (Create, Edit, Item Type - Stock/Service, Costing Method - Weighted Average, Pricing, Units of Measure, Quantity Tracking - Single Location)
+
+Transaction Types Configuration (Define Inventory transaction types - e.g., Adjustments, link to GL Accounts)
+
+Transaction Processing (Manual Adjustments - Quantity and Value)
+
+Basic Inventory Reports (Inventory Item Listing, Stock Quantity Report)
+
+Order Entry (OE) - Linking Sales & Purchasing:
+
+Document Types Configuration (Define Sales Order, Purchase Order, Goods Received Voucher (GRV), Invoice, Credit Note document types, link to Inventory/AR/AP Transaction Types)
+
+Sales Document Processing (Create Sales Order, Convert Sales Order to Invoice)
+
+Purchasing Document Processing (Create Purchase Order, Record GRV, Record Supplier Invoice from GRV)
+
+Document Details (Line items with Quantity, Item, Price, Discount, link to Customer/Supplier)
+
+Basic OE Reports (Sales Order Listing, Purchase Order Listing, GRV Listing)
+
+Command 6: Generate Section 4: Scope - Out of Scope for MVP
+Generate Section 4.2: Out of Scope for MVP.
+Include the following list:
+
+Multi-Currency functionality
+
+Multi-Warehousing functionality
+
+Point of Sale (POS) module
+
+Pricing Matrix module (beyond basic item pricing)
+
+Serial Number Tracking module
+
+Bill of Materials (BOM) module
+
+European Union / Intrastat module
+
+Contact Management module
+
+Fixed Assets module
+
+Bank Manager module (Integration with banks)
+
+System Audit Manager module (Detailed audit logging beyond basic security/entry logs)
+
+Voucher Management module (Internal approval workflows)
+
+Debtors Manager module (Collections workflow, Email/SMS reminders)
+
+Sage Intelligence Reporting Clone (Full BI suite)
+
+Complex batch imports (e.g., price updates from file)
+
+Advanced system features (e.g., Custom Fields, API/SDK for third-party integration, Mobile Sales specific UI/features)
+
+Automated data migration tools from other systems.
+
+Command 7: Generate Section 5: User Stories / Use Cases
+Generate Section 5: User Stories / Use Cases.
+Include the following introduction and sub-sections with their lists of user stories:
+
+(Include the introductory sentence from the original document here)
+
+5.1 As an Administrator, I want to:
+(Include the list of user stories for Admin here)
+
+5.2 As an Accountant, I want to:
+(Include the list of user stories for Accountant here)
+
+5.3 As a Salesperson, I want to:
+(Include the list of user stories for Salesperson here)
+
+5.4 As a Purchasing Personnel, I want to:
+(Include the list of user stories for Purchasing Personnel here)
+
+5.5 As Warehouse Staff, I want to:
+(Include the list of user stories for Warehouse Staff here)
+
+Command 8: Generate Section 6: Functional Requirements (Introduction & System Core)
+Generate Section 6: Functional Requirements.
+Include the introduction "(Detailed requirements broken down by module and feature.)" and the following sub-section with its requirements:
+
+6.1 System Core:
+(Include the sub-sections 6.1.1 through 6.1.7 and the REQ-SYS- requirements under each from the original document here)
+
+Command 9: Generate Section 6: Functional Requirements (GL Module)
+Add the following sub-section and its requirements to Section 6: Functional Requirements:
+
+6.2 General Ledger (GL):
+(Include the sub-sections 6.2.1 through 6.2.3 and the REQ-GL- requirements under each from the original document here)
+
+Command 10: Generate Section 6: Functional Requirements (AR Module)
+Add the following sub-section and its requirements to Section 6: Functional Requirements:
+
+6.3 Accounts Receivable (AR):
+(Include the sub-sections 6.3.1 through 6.3.6 and the REQ-AR- requirements under each from the original document here)
+
+Command 11: Generate Section 6: Functional Requirements (AP Module)
+Add the following sub-section and its requirements to Section 6: Functional Requirements:
+
+6.4 Accounts Payable (AP):
+(Include the sub-sections 6.4.1 through 6.4.6 and the REQ-AP- requirements under each from the original document here)
+
+Command 12: Generate Section 6: Functional Requirements (Inventory Module)
+Add the following sub-section and its requirements to Section 6: Functional Requirements:
+
+6.5 Inventory:
+(Include the sub-sections 6.5.1 through 6.5.4 and the REQ-INV- requirements under each from the original document here)
+
+Command 13: Generate Section 6: Functional Requirements (OE Module)
+Add the following sub-section and its requirements to Section 6: Functional Requirements:
+
+6.6 Order Entry (OE):
+(Include the sub-sections 6.6.1 through 6.6.4 and the REQ-OE- requirements under each from the original document here)
+
+Command 14: Generate Section 6: Functional Requirements (Cross-Module Integration)
+Add the following sub-section and its requirements to Section 6: Functional Requirements:
+
+6.7 Cross-Module Integration:
+(Include the REQ-CROSS- requirements here from the original document here)
+
+Command 15: Generate Section 7: Non-Functional Requirements
+Generate Section 7: Non-Functional Requirements.
+Include the following introduction and sub-sections with their requirements:
+
+(Include the introduction "(Detailed requirements broken down by module and feature.)" - Oh wait, that's for Section 6. Just start with the first sub-section 7.1 Performance.)
+
+7.1 Performance:
+(Include the NFR-PERF- requirements here)
+
+7.2 Security:
+(Include the NFR-SEC- requirements here)
+
+7.3 Usability:
+(Include the NFR-USABILITY- requirements here)
+
+7.4 Reliability:
+(Include the NFR-RELIABILITY- requirements here)
+
+7.5 Scalability:
+(Include the NFR-SCALABILITY- requirements here)
+
+7.6 Compatibility:
+(Include the NFR-COMPAT- requirements here)
+
+Command 16: Generate Section 8: Design / Technical Considerations
+Generate Section 8: Design / Technical Considerations.
+Include the following introduction and points:
+
+(Include the introduction "8. Design / Technical Considerations" and the points 8.1 through 8.8 from the original document here)
+
+Command 17: Generate Section 9: Open Questions / Future Considerations
+Generate Section 9: Open Questions / Future Considerations.
+Include the following points:
+
+(Include the list of points from the original document here)
+
+Command 18: Generate Section 10: Appendices
+Generate Section 10: Appendices.
+Include the following sub-sections and their content:
+
+10.1 Glossary: Definition of terms used (ERP, GL, AR, AP, OE, GRV, RBAC, Agent, Transaction Type, etc.)
+
+10.2 References:
+(Include the list of links/documents from the original document here)
+
+Command 19: Finalize Document
+Include the following concluding text at the end of the document:
+
+This outline provides a solid starting point. As you move through development, you will need to flesh out the functional requirements (Section 6) with much more detail, potentially creating separate requirement documents or user stories for each specific screen or workflow. The user stories (Section 5) help ensure the requirements are tied back to actual user needs. Remember to revisit and update this PRD as your project evolves.
+
+Instructions for the User:
+
+Start with Command 1. Give it to the AI.
+
+Then, give Command 2 to the AI.
+
+Continue giving the commands sequentially (Command 3, Command 4, etc.) to the AI.
+
+When you reach Commands 7, 8, 9, 10, 11, 12, 13, 14, 15, make sure to copy and paste the content (the lists of user stories or requirements) from the original PRD into the command where indicated by the parenthetical notes (Include the ... here).
+
+Remember to replace the bracketed placeholders like [Insert Date] and [Your Name(s)] in Command 1.
+
+The AI should build the PRD section by section as you provide the commands.
