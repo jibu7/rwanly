@@ -1,98 +1,927 @@
 #!/usr/bin/env python3
 """
-Create a test user for testing the API
+Comprehensive Test Data Creation Script for rwanly ERP
+Creates a complete test environment with sample data across all modules
 """
 
+import sys
+import os
+from datetime import date, datetime, timedelta
+from decimal import Decimal
+
+# Add the project root to the Python path
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+
 from app.database.database import SessionLocal
-from app.models import Company, User, Role, UserRole
+from app.models.core import (
+    Company, User, Role, UserRole, AccountingPeriod,
+    GLAccount, GLTransaction,
+    Customer, ARTransactionType, ARTransaction, ARAllocation, AgeingPeriod,
+    Supplier, APTransactionType, APTransaction, APAllocation,
+    InventoryItem, InventoryTransactionType, InventoryTransaction
+)
 from app.core.security import get_password_hash
 from app.core.permissions import DEFAULT_ROLES
 
-def create_test_data():
-    """Create test company, roles, and user"""
-    db = SessionLocal()
+
+def print_section(title):
+    """Print a formatted section header"""
+    print(f"\n{'=' * 60}")
+    print(f"🔄 {title}")
+    print('=' * 60)
+
+
+def create_test_company(db):
+    """Create a comprehensive test company with full settings"""
+    print("Creating Test Company...")
     
-    try:
-        # Create test company first
-        print("Creating test company...")
-        company = Company(
-            name="Test Company Ltd",
-            address={
-                "street": "123 Test Street",
-                "city": "Test City",
-                "state": "Test State",
-                "zip_code": "12345",
-                "country": "Test Country"
-            },
-            contact_info={
-                "phone": "+1-555-0123",
-                "email": "info@testcompany.com",
-                "website": "www.testcompany.com"
-            },
-            settings={
-                "default_currency": "USD",
-                "date_format": "YYYY-MM-DD",
-                "financial_year_start": "01-01"
-            }
+    company = Company(
+        name="TechFlow Solutions Ltd",
+        address={
+            "street": "456 Innovation Boulevard",
+            "suite": "Suite 300",
+            "city": "Silicon Valley",
+            "state": "California",
+            "zip_code": "94025",
+            "country": "United States"
+        },
+        contact_info={
+            "phone": "+1-650-555-0199",
+            "fax": "+1-650-555-0198",
+            "email": "info@techflowsolutions.com",
+            "website": "www.techflowsolutions.com",
+            "tax_id": "XX-1234567"
+        },
+        settings={
+            "default_currency": "USD",
+            "date_format": "MM/DD/YYYY",
+            "financial_year_start": "01-01",
+            "decimal_places": 2,
+            "timezone": "America/Los_Angeles",
+            "invoice_terms": "Net 30",
+            "auto_number_invoices": True,
+            "auto_number_orders": True
+        }
+    )
+    db.add(company)
+    db.commit()
+    db.refresh(company)
+    print(f"✅ Created company: {company.name} (ID: {company.id})")
+    return company
+
+
+def create_roles_and_users(db, company_id):
+    """Create roles and comprehensive test users"""
+    print("Creating Roles and Users...")
+    
+    # Create default roles
+    created_roles = {}
+    for role_name, permissions in DEFAULT_ROLES.items():
+        role = Role(
+            name=role_name,
+            description=f"Default {role_name} role with comprehensive permissions",
+            permissions=permissions,
+            company_id=company_id
         )
-        db.add(company)
+        db.add(role)
         db.commit()
-        db.refresh(company)
-        print(f"✅ Created company: {company.name} (ID: {company.id})")
-        
-        # Create default roles for this company
-        print("Creating default roles...")
-        created_roles = {}
-        
-        for role_name, permissions in DEFAULT_ROLES.items():
-            role = Role(
-                name=role_name,
-                description=f"Default {role_name} role",
-                permissions=permissions,
-                company_id=company.id  # Set the company_id
-            )
-            db.add(role)
-            db.commit()
-            db.refresh(role)
-            created_roles[role_name] = role
-            print(f"✅ Created role: {role_name}")
-        
-        # Create test user
-        print("Creating test user...")
+        db.refresh(role)
+        created_roles[role_name] = role
+        print(f"✅ Created role: {role_name}")
+    
+    # Create comprehensive test users
+    test_users = [
+        {
+            "username": "admin@techflow.com",
+            "email": "admin@techflow.com",
+            "first_name": "System",
+            "last_name": "Administrator",
+            "password": "admin123",
+            "role": "Administrator"
+        },
+        {
+            "username": "accountant@techflow.com",
+            "email": "accountant@techflow.com",
+            "first_name": "Sarah",
+            "last_name": "Johnson",
+            "password": "accountant123",
+            "role": "Accountant"
+        },
+        {
+            "username": "sales@techflow.com",
+            "email": "sales@techflow.com",
+            "first_name": "Michael",
+            "last_name": "Chen",
+            "password": "sales123",
+            "role": "Sales"
+        },
+        {
+            "username": "clerk@techflow.com",
+            "email": "clerk@techflow.com",
+            "first_name": "Jennifer",
+            "last_name": "Williams",
+            "password": "clerk123",
+            "role": "Clerk"
+        }
+    ]
+    
+    created_users = {}
+    for user_data in test_users:
         user = User(
-            username="admin@testcompany.com", # Changed from "admin"
-            email="admin@testcompany.com",
-            first_name="Test",
-            last_name="Admin",
-            password_hash=get_password_hash("admin123"),
+            username=user_data["username"],
+            email=user_data["email"],
+            first_name=user_data["first_name"],
+            last_name=user_data["last_name"],
+            password_hash=get_password_hash(user_data["password"]),
             is_active=True,
-            company_id=company.id
+            company_id=company_id
         )
         db.add(user)
         db.commit()
         db.refresh(user)
-        print(f"✅ Created user: {user.email} (ID: {user.id})")
         
-        # Assign Accountant role to user
-        print("Assigning role to user...")
+        # Assign role
         user_role = UserRole(
             user_id=user.id,
-            role_id=created_roles["Accountant"].id
+            role_id=created_roles[user_data["role"]].id
         )
         db.add(user_role)
         db.commit()
-        print("✅ Assigned Accountant role to user")
         
-        print("\n🎉 Test data created successfully!")
-        print(f"Login credentials:")
-        print(f"  Email: admin@testcompany.com")
-        print(f"  Password: admin123")
+        created_users[user_data["role"]] = user
+        print(f"✅ Created user: {user.email} ({user_data['role']})")
+    
+    return created_users
+
+
+def create_accounting_periods(db, company_id):
+    """Create accounting periods for current and previous years"""
+    print("Creating Accounting Periods...")
+    
+    current_year = datetime.now().year
+    periods = []
+    
+    # Create periods for last year and this year
+    for year in [current_year - 1, current_year]:
+        for month in range(1, 13):
+            # Calculate start and end dates
+            start_date = date(year, month, 1)
+            if month == 12:
+                end_date = date(year + 1, 1, 1) - timedelta(days=1)
+            else:
+                end_date = date(year, month + 1, 1) - timedelta(days=1)
+            
+            # Previous year periods are closed, current year periods are open
+            is_closed = (year < current_year)
+            
+            period = AccountingPeriod(
+                company_id=company_id,
+                period_name=f"{start_date.strftime('%B')} {year}",
+                start_date=start_date,
+                end_date=end_date,
+                financial_year=year,
+                is_closed=is_closed
+            )
+            db.add(period)
+            periods.append(period)
+    
+    db.commit()
+    print(f"✅ Created {len(periods)} accounting periods for {current_year-1}-{current_year}")
+    return periods
+
+
+def create_chart_of_accounts(db, company_id):
+    """Create a comprehensive chart of accounts"""
+    print("Creating Chart of Accounts...")
+    
+    accounts_data = [
+        # ASSETS
+        {"code": "1000", "name": "Cash in Bank - Operating", "type": "ASSETS", "subtype": "Current Assets", "balance": "DEBIT"},
+        {"code": "1010", "name": "Cash in Bank - Savings", "type": "ASSETS", "subtype": "Current Assets", "balance": "DEBIT"},
+        {"code": "1020", "name": "Petty Cash", "type": "ASSETS", "subtype": "Current Assets", "balance": "DEBIT"},
+        {"code": "1100", "name": "Accounts Receivable", "type": "ASSETS", "subtype": "Current Assets", "balance": "DEBIT", "control": True},
+        {"code": "1200", "name": "Inventory - Raw Materials", "type": "ASSETS", "subtype": "Current Assets", "balance": "DEBIT"},
+        {"code": "1210", "name": "Inventory - Work in Progress", "type": "ASSETS", "subtype": "Current Assets", "balance": "DEBIT"},
+        {"code": "1220", "name": "Inventory - Finished Goods", "type": "ASSETS", "subtype": "Current Assets", "balance": "DEBIT"},
+        {"code": "1300", "name": "Prepaid Insurance", "type": "ASSETS", "subtype": "Current Assets", "balance": "DEBIT"},
+        {"code": "1310", "name": "Prepaid Rent", "type": "ASSETS", "subtype": "Current Assets", "balance": "DEBIT"},
+        {"code": "1500", "name": "Office Equipment", "type": "ASSETS", "subtype": "Fixed Assets", "balance": "DEBIT"},
+        {"code": "1510", "name": "Computer Equipment", "type": "ASSETS", "subtype": "Fixed Assets", "balance": "DEBIT"},
+        {"code": "1520", "name": "Furniture & Fixtures", "type": "ASSETS", "subtype": "Fixed Assets", "balance": "DEBIT"},
+        {"code": "1600", "name": "Accumulated Depreciation - Equipment", "type": "ASSETS", "subtype": "Fixed Assets", "balance": "CREDIT"},
+        
+        # LIABILITIES
+        {"code": "2000", "name": "Accounts Payable", "type": "LIABILITIES", "subtype": "Current Liabilities", "balance": "CREDIT", "control": True},
+        {"code": "2100", "name": "Sales Tax Payable", "type": "LIABILITIES", "subtype": "Current Liabilities", "balance": "CREDIT"},
+        {"code": "2110", "name": "Payroll Tax Payable", "type": "LIABILITIES", "subtype": "Current Liabilities", "balance": "CREDIT"},
+        {"code": "2200", "name": "Accrued Expenses", "type": "LIABILITIES", "subtype": "Current Liabilities", "balance": "CREDIT"},
+        {"code": "2300", "name": "Notes Payable - Short Term", "type": "LIABILITIES", "subtype": "Current Liabilities", "balance": "CREDIT"},
+        {"code": "2500", "name": "Long Term Debt", "type": "LIABILITIES", "subtype": "Long Term Liabilities", "balance": "CREDIT"},
+        
+        # EQUITY
+        {"code": "3000", "name": "Owner's Capital", "type": "EQUITY", "subtype": "Owner's Equity", "balance": "CREDIT"},
+        {"code": "3100", "name": "Retained Earnings", "type": "EQUITY", "subtype": "Owner's Equity", "balance": "CREDIT"},
+        {"code": "3200", "name": "Current Year Earnings", "type": "EQUITY", "subtype": "Owner's Equity", "balance": "CREDIT"},
+        
+        # REVENUE
+        {"code": "4000", "name": "Sales Revenue - Products", "type": "REVENUE", "subtype": "Operating Revenue", "balance": "CREDIT"},
+        {"code": "4100", "name": "Sales Revenue - Services", "type": "REVENUE", "subtype": "Operating Revenue", "balance": "CREDIT"},
+        {"code": "4200", "name": "Interest Income", "type": "REVENUE", "subtype": "Non-Operating Revenue", "balance": "CREDIT"},
+        {"code": "4300", "name": "Other Income", "type": "REVENUE", "subtype": "Non-Operating Revenue", "balance": "CREDIT"},
+        
+        # EXPENSES
+        {"code": "5000", "name": "Cost of Goods Sold", "type": "EXPENSES", "subtype": "Cost of Sales", "balance": "DEBIT"},
+        {"code": "6000", "name": "Salaries & Wages", "type": "EXPENSES", "subtype": "Operating Expenses", "balance": "DEBIT"},
+        {"code": "6100", "name": "Rent Expense", "type": "EXPENSES", "subtype": "Operating Expenses", "balance": "DEBIT"},
+        {"code": "6200", "name": "Utilities Expense", "type": "EXPENSES", "subtype": "Operating Expenses", "balance": "DEBIT"},
+        {"code": "6300", "name": "Insurance Expense", "type": "EXPENSES", "subtype": "Operating Expenses", "balance": "DEBIT"},
+        {"code": "6400", "name": "Professional Services", "type": "EXPENSES", "subtype": "Operating Expenses", "balance": "DEBIT"},
+        {"code": "6500", "name": "Office Supplies", "type": "EXPENSES", "subtype": "Operating Expenses", "balance": "DEBIT"},
+        {"code": "6600", "name": "Marketing & Advertising", "type": "EXPENSES", "subtype": "Operating Expenses", "balance": "DEBIT"},
+        {"code": "6700", "name": "Travel & Entertainment", "type": "EXPENSES", "subtype": "Operating Expenses", "balance": "DEBIT"},
+        {"code": "6800", "name": "Depreciation Expense", "type": "EXPENSES", "subtype": "Operating Expenses", "balance": "DEBIT"},
+        {"code": "7000", "name": "Interest Expense", "type": "EXPENSES", "subtype": "Non-Operating Expenses", "balance": "DEBIT"},
+        {"code": "7100", "name": "Bank Fees", "type": "EXPENSES", "subtype": "Non-Operating Expenses", "balance": "DEBIT"},
+    ]
+    
+    accounts = {}
+    for acc_data in accounts_data:
+        account = GLAccount(
+            company_id=company_id,
+            account_code=acc_data["code"],
+            account_name=acc_data["name"],
+            account_type=acc_data["type"],
+            account_subtype=acc_data["subtype"],
+            normal_balance=acc_data["balance"],
+            is_active=True,
+            is_control_account=acc_data.get("control", False),
+            description=f"{acc_data['subtype']} account for {acc_data['name'].lower()}"
+        )
+        db.add(account)
+        accounts[acc_data["code"]] = account
+    
+    db.commit()
+    print(f"✅ Created {len(accounts)} GL accounts")
+    return accounts
+
+
+def create_customers(db, company_id, ar_receivable_account_id):
+    """Create comprehensive customer data"""
+    print("Creating Customers...")
+    
+    customers_data = [
+        {
+            "code": "CUST001",
+            "name": "Acme Corporation",
+            "contact": "John Smith",
+            "email": "john.smith@acmecorp.com",
+            "phone": "+1-555-0101",
+            "address": "123 Business Ave, Suite 100",
+            "city": "San Francisco",
+            "state": "CA",
+            "zip": "94105",
+            "terms": 30,
+            "credit_limit": 50000.00
+        },
+        {
+            "code": "CUST002", 
+            "name": "TechStart Inc",
+            "contact": "Sarah Davis",
+            "email": "sarah@techstart.com",
+            "phone": "+1-555-0102",
+            "address": "456 Innovation St",
+            "city": "Palo Alto",
+            "state": "CA", 
+            "zip": "94301",
+            "terms": 15,
+            "credit_limit": 25000.00
+        },
+        {
+            "code": "CUST003",
+            "name": "Global Manufacturing Ltd",
+            "contact": "Robert Wilson",
+            "email": "r.wilson@globalmfg.com",
+            "phone": "+1-555-0103",
+            "address": "789 Industrial Blvd",
+            "city": "San Jose",
+            "state": "CA",
+            "zip": "95113", 
+            "terms": 45,
+            "credit_limit": 100000.00
+        },
+        {
+            "code": "CUST004",
+            "name": "StartupXYZ",
+            "contact": "Emily Johnson",
+            "email": "emily@startupxyz.com",
+            "phone": "+1-555-0104",
+            "address": "321 Venture Way",
+            "city": "Mountain View",
+            "state": "CA",
+            "zip": "94041",
+            "terms": 30,
+            "credit_limit": 15000.00
+        },
+        {
+            "code": "CUST005",
+            "name": "Enterprise Solutions Corp",
+            "contact": "David Brown",
+            "email": "david.brown@entcorp.com",
+            "phone": "+1-555-0105",
+            "address": "555 Corporate Plaza",
+            "city": "Santa Clara",
+            "state": "CA",
+            "zip": "95051",
+            "terms": 60,
+            "credit_limit": 75000.00
+        }
+    ]
+    
+    customers = {}
+    for cust_data in customers_data:
+        customer = Customer(
+            company_id=company_id,
+            customer_code=cust_data["code"],
+            name=cust_data["name"],
+            contact_person=cust_data["contact"],
+            email=cust_data["email"],
+            phone=cust_data["phone"],
+            address_line1=cust_data["address"],
+            city=cust_data["city"],
+            state=cust_data["state"],
+            postal_code=cust_data["zip"],
+            country="United States",
+            payment_terms_days=cust_data["terms"],
+            credit_limit=Decimal(str(cust_data["credit_limit"])),
+            current_balance=Decimal('0.00'),
+            is_active=True
+        )
+        db.add(customer)
+        customers[cust_data["code"]] = customer
+    
+    db.commit()
+    print(f"✅ Created {len(customers)} customers")
+    return customers
+
+
+def create_suppliers(db, company_id):
+    """Create comprehensive supplier data"""
+    print("Creating Suppliers...")
+    
+    suppliers_data = [
+        {
+            "code": "SUPP001",
+            "name": "TechParts Supply Co",
+            "contact": "James Miller",
+            "email": "james@techparts.com",
+            "phone": "+1-555-0201",
+            "address": "100 Supplier St",
+            "city": "Oakland",
+            "state": "CA",
+            "zip": "94607",
+            "terms": 30,
+            "credit_limit": 25000.00
+        },
+        {
+            "code": "SUPP002",
+            "name": "Office Depot Business",
+            "contact": "Lisa Anderson",
+            "email": "lisa@officedepot.com", 
+            "phone": "+1-555-0202",
+            "address": "200 Office Way",
+            "city": "Fremont",
+            "state": "CA",
+            "zip": "94536",
+            "terms": 15,
+            "credit_limit": 10000.00
+        },
+        {
+            "code": "SUPP003",
+            "name": "Industrial Materials Inc",
+            "contact": "Mark Thompson",
+            "email": "mark@indmaterials.com",
+            "phone": "+1-555-0203",
+            "address": "300 Material Ave",
+            "city": "Hayward",
+            "state": "CA", 
+            "zip": "94544",
+            "terms": 45,
+            "credit_limit": 50000.00
+        },
+        {
+            "code": "SUPP004",
+            "name": "Software Licensing Corp",
+            "contact": "Nancy White",
+            "email": "nancy@softlicense.com",
+            "phone": "+1-555-0204",
+            "address": "400 Software Blvd",
+            "city": "Redwood City",
+            "state": "CA",
+            "zip": "94063",
+            "terms": 30,
+            "credit_limit": 30000.00
+        }
+    ]
+    
+    suppliers = {}
+    for supp_data in suppliers_data:
+        supplier = Supplier(
+            company_id=company_id,
+            supplier_code=supp_data["code"],
+            name=supp_data["name"],
+            contact_person=supp_data["contact"],
+            email=supp_data["email"],
+            phone=supp_data["phone"],
+            address_line1=supp_data["address"],
+            city=supp_data["city"],
+            state=supp_data["state"],
+            postal_code=supp_data["zip"],
+            country="United States",
+            payment_terms_days=supp_data["terms"],
+            credit_limit=Decimal(str(supp_data["credit_limit"])),
+            current_balance=Decimal('0.00'),
+            is_active=True
+        )
+        db.add(supplier)
+        suppliers[supp_data["code"]] = supplier
+    
+    db.commit()
+    print(f"✅ Created {len(suppliers)} suppliers")
+    return suppliers
+
+
+def create_inventory_items(db, company_id, accounts):
+    """Create inventory items with proper GL account links"""
+    print("Creating Inventory Items...")
+    
+    # Get required GL accounts
+    inventory_account = next((acc for acc in accounts.values() if acc.account_code == "1200"), None)
+    cogs_account = next((acc for acc in accounts.values() if acc.account_code == "5000"), None)
+    sales_account = next((acc for acc in accounts.values() if acc.account_code == "4000"), None)
+    
+    items_data = [
+        {
+            "code": "PROD001",
+            "description": "Software Development Kit - Premium",
+            "type": "STOCK",
+            "uom": "License",
+            "cost_price": 150.00,
+            "selling_price": 299.99
+        },
+        {
+            "code": "PROD002", 
+            "description": "Cloud Storage Solution - 1TB",
+            "type": "SERVICE",
+            "uom": "Subscription",
+            "cost_price": 50.00,
+            "selling_price": 99.99
+        },
+        {
+            "code": "PROD003",
+            "description": "Hardware Security Module",
+            "type": "STOCK",
+            "uom": "Unit",
+            "cost_price": 500.00,
+            "selling_price": 899.99
+        },
+        {
+            "code": "PROD004",
+            "description": "Technical Support Package",
+            "type": "SERVICE",
+            "uom": "Hour",
+            "cost_price": 75.00,
+            "selling_price": 150.00
+        },
+        {
+            "code": "PROD005",
+            "description": "Enterprise Analytics Platform",
+            "type": "SERVICE",
+            "uom": "User",
+            "cost_price": 25.00,
+            "selling_price": 49.99
+        }
+    ]
+    
+    items = {}
+    for item_data in items_data:
+        item = InventoryItem(
+            company_id=company_id,
+            item_code=item_data["code"],
+            description=item_data["description"],
+            item_type=item_data["type"],
+            unit_of_measure=item_data["uom"],
+            cost_price=Decimal(str(item_data["cost_price"])),
+            selling_price=Decimal(str(item_data["selling_price"])),
+            costing_method="WEIGHTED_AVERAGE",
+            gl_asset_account_id=inventory_account.id,
+            gl_expense_account_id=cogs_account.id,
+            gl_revenue_account_id=sales_account.id,
+            quantity_on_hand=Decimal('0.00'),
+            is_active=True
+        )
+        db.add(item)
+        items[item_data["code"]] = item
+    
+    db.commit()
+    print(f"✅ Created {len(items)} inventory items")
+    return items
+
+
+def create_transaction_types(db, company_id, accounts):
+    """Create AR, AP, and Inventory transaction types"""
+    print("Creating Transaction Types...")
+    
+    # Get required GL accounts
+    ar_account = next((acc for acc in accounts.values() if acc.account_code == "1100"), None)
+    ap_account = next((acc for acc in accounts.values() if acc.account_code == "2000"), None)
+    sales_account = next((acc for acc in accounts.values() if acc.account_code == "4000"), None)
+    cogs_account = next((acc for acc in accounts.values() if acc.account_code == "5000"), None)
+    
+    # AR Transaction Types
+    ar_types_data = [
+        {"code": "INV", "name": "Customer Invoice", "balance": "DEBIT"},
+        {"code": "PMT", "name": "Customer Payment", "balance": "CREDIT"},
+        {"code": "CN", "name": "Credit Note", "balance": "CREDIT"},
+        {"code": "DN", "name": "Debit Note", "balance": "DEBIT"}
+    ]
+    
+    ar_types = {}
+    for ar_data in ar_types_data:
+        ar_type = ARTransactionType(
+            company_id=company_id,
+            type_code=ar_data["code"],
+            type_name=ar_data["name"],
+            description=f"AR transaction type for {ar_data['name'].lower()}",
+            gl_account_id=ar_account.id,
+            default_income_account_id=sales_account.id if ar_data["code"] == "INV" else None,
+            affects_balance=ar_data["balance"],
+            is_active=True
+        )
+        db.add(ar_type)
+        ar_types[ar_data["code"]] = ar_type
+    
+    # AP Transaction Types
+    ap_types_data = [
+        {"code": "BILL", "name": "Supplier Invoice", "balance": "CREDIT"},
+        {"code": "PMT", "name": "Supplier Payment", "balance": "DEBIT"},
+        {"code": "CN", "name": "Credit Note", "balance": "DEBIT"},
+        {"code": "DN", "name": "Debit Note", "balance": "CREDIT"}
+    ]
+    
+    ap_types = {}
+    for ap_data in ap_types_data:
+        ap_type = APTransactionType(
+            company_id=company_id,
+            type_code=ap_data["code"],
+            type_name=ap_data["name"],
+            description=f"AP transaction type for {ap_data['name'].lower()}",
+            gl_account_id=ap_account.id,
+            default_expense_account_id=cogs_account.id if ap_data["code"] == "BILL" else None,
+            affects_balance=ap_data["balance"],
+            is_active=True
+        )
+        db.add(ap_type)
+        ap_types[ap_data["code"]] = ap_type
+    
+    # Inventory Transaction Types
+    inv_types_data = [
+        {"code": "REC", "name": "Receipt", "effect": "INCREASE"},
+        {"code": "ISS", "name": "Issue", "effect": "DECREASE"},
+        {"code": "ADJ+", "name": "Positive Adjustment", "effect": "INCREASE"},
+        {"code": "ADJ-", "name": "Negative Adjustment", "effect": "DECREASE"},
+        {"code": "TRF", "name": "Transfer", "effect": "DECREASE"}
+    ]
+    
+    inv_types = {}
+    for inv_data in inv_types_data:
+        inv_type = InventoryTransactionType(
+            company_id=company_id,
+            type_code=inv_data["code"],
+            type_name=inv_data["name"],
+            description=f"Inventory transaction type for {inv_data['name'].lower()}",
+            affects_quantity=inv_data["effect"],
+            is_active=True
+        )
+        db.add(inv_type)
+        inv_types[inv_data["code"]] = inv_type
+    
+    db.commit()
+    print(f"✅ Created {len(ar_types)} AR, {len(ap_types)} AP, and {len(inv_types)} inventory transaction types")
+    return ar_types, ap_types, inv_types
+
+
+def create_sample_transactions(db, company_id, users, accounts, customers, suppliers, items, periods, ar_types, ap_types, inv_types):
+    """Create comprehensive sample transactions"""
+    print("Creating Sample Transactions...")
+    
+    # Get current period
+    current_period = next((p for p in periods if not p.is_closed), periods[-1])
+    user = users["Accountant"]
+    
+    # Sample AR Transactions
+    ar_transactions = []
+    invoice_type = ar_types["INV"]
+    payment_type = ar_types["PMT"]
+    
+    # Create some invoices
+    invoice_data = [
+        {"customer": "CUST001", "amount": 5000.00, "ref": "INV-2024-001", "desc": "Software licensing fees"},
+        {"customer": "CUST002", "amount": 2500.00, "ref": "INV-2024-002", "desc": "Technical support services"},
+        {"customer": "CUST003", "amount": 15000.00, "ref": "INV-2024-003", "desc": "Enterprise platform setup"},
+        {"customer": "CUST004", "amount": 1200.00, "ref": "INV-2024-004", "desc": "Cloud storage subscription"},
+        {"customer": "CUST005", "amount": 8500.00, "ref": "INV-2024-005", "desc": "Custom development work"}
+    ]
+    
+    for inv_data in invoice_data:
+        customer = customers[inv_data["customer"]]
+        amount = Decimal(str(inv_data["amount"]))
+        
+        ar_transaction = ARTransaction(
+            company_id=company_id,
+            customer_id=customer.id,
+            transaction_type_id=invoice_type.id,
+            accounting_period_id=current_period.id,
+            transaction_date=date.today() - timedelta(days=30),
+            due_date=date.today() + timedelta(days=30),
+            reference_number=inv_data["ref"],
+            description=inv_data["desc"],
+            gross_amount=amount,
+            tax_amount=amount * Decimal('0.0875'),  # 8.75% tax
+            discount_amount=Decimal('0.00'),
+            net_amount=amount + (amount * Decimal('0.0875')),
+            outstanding_amount=amount + (amount * Decimal('0.0875')),
+            source_module="AR",
+            is_posted=True,
+            posted_by=user.id,
+            posted_at=datetime.now()
+        )
+        db.add(ar_transaction)
+        ar_transactions.append(ar_transaction)
+        
+        # Update customer balance
+        customer.current_balance += ar_transaction.net_amount
+    
+    # Create some payments
+    payment_data = [
+        {"customer": "CUST001", "amount": 3000.00, "ref": "PMT-2024-001"},
+        {"customer": "CUST002", "amount": 2500.00, "ref": "PMT-2024-002"},
+        {"customer": "CUST003", "amount": 10000.00, "ref": "PMT-2024-003"}
+    ]
+    
+    for pmt_data in payment_data:
+        customer = customers[pmt_data["customer"]]
+        amount = Decimal(str(pmt_data["amount"]))
+        
+        ar_transaction = ARTransaction(
+            company_id=company_id,
+            customer_id=customer.id,
+            transaction_type_id=payment_type.id,
+            accounting_period_id=current_period.id,
+            transaction_date=date.today() - timedelta(days=15),
+            reference_number=pmt_data["ref"],
+            description=f"Payment received from {customer.name}",
+            gross_amount=amount,
+            tax_amount=Decimal('0.00'),
+            discount_amount=Decimal('0.00'),
+            net_amount=amount,
+            outstanding_amount=Decimal('0.00'),
+            source_module="AR",
+            is_posted=True,
+            posted_by=user.id,
+            posted_at=datetime.now()
+        )
+        db.add(ar_transaction)
+        
+        # Update customer balance
+        customer.current_balance -= amount
+    
+    db.commit()
+    print(f"✅ Created {len(ar_transactions) + len(payment_data)} AR transactions")
+    
+    # Sample AP Transactions
+    ap_transactions = []
+    bill_type = ap_types["BILL"]
+    ap_payment_type = ap_types["PMT"]
+    
+    # Create some bills
+    bill_data = [
+        {"supplier": "SUPP001", "amount": 3000.00, "ref": "BILL-2024-001", "desc": "Computer hardware purchase"},
+        {"supplier": "SUPP002", "amount": 500.00, "ref": "BILL-2024-002", "desc": "Office supplies"},
+        {"supplier": "SUPP003", "amount": 7500.00, "ref": "BILL-2024-003", "desc": "Raw materials"},
+        {"supplier": "SUPP004", "amount": 1200.00, "ref": "BILL-2024-004", "desc": "Software licenses"}
+    ]
+    
+    for bill_data in bill_data:
+        supplier = suppliers[bill_data["supplier"]]
+        amount = Decimal(str(bill_data["amount"]))
+        
+        ap_transaction = APTransaction(
+            company_id=company_id,
+            supplier_id=supplier.id,
+            transaction_type_id=bill_type.id,
+            accounting_period_id=current_period.id,
+            transaction_date=date.today() - timedelta(days=25),
+            due_date=date.today() + timedelta(days=supplier.payment_terms_days),
+            reference_number=bill_data["ref"],
+            description=bill_data["desc"],
+            gross_amount=amount,
+            tax_amount=amount * Decimal('0.0875'),  # 8.75% tax
+            discount_amount=Decimal('0.00'),
+            net_amount=amount + (amount * Decimal('0.0875')),
+            outstanding_amount=amount + (amount * Decimal('0.0875')),
+            source_module="AP",
+            is_posted=True,
+            posted_by=user.id,
+            posted_at=datetime.now()
+        )
+        db.add(ap_transaction)
+        ap_transactions.append(ap_transaction)
+        
+        # Update supplier balance
+        supplier.current_balance += ap_transaction.net_amount
+    
+    db.commit()
+    print(f"✅ Created {len(ap_transactions)} AP transactions")
+    
+    # Sample Inventory Transactions
+    receipt_type = inv_types["REC"]
+    issue_type = inv_types["ISS"]
+    
+    # Create inventory receipts
+    receipt_data = [
+        {"item": "PROD001", "qty": 100, "cost": 150.00, "ref": "REC-2024-001"},
+        {"item": "PROD003", "qty": 50, "cost": 500.00, "ref": "REC-2024-002"},
+        {"item": "PROD001", "qty": 25, "cost": 145.00, "ref": "REC-2024-003"}
+    ]
+    
+    for rec_data in receipt_data:
+        item = items[rec_data["item"]]
+        qty = Decimal(str(rec_data["qty"]))
+        cost = Decimal(str(rec_data["cost"]))
+        
+        inv_transaction = InventoryTransaction(
+            company_id=company_id,
+            item_id=item.id,
+            transaction_type_id=receipt_type.id,
+            accounting_period_id=current_period.id,
+            transaction_date=date.today() - timedelta(days=20),
+            reference_number=rec_data["ref"],
+            description=f"Receipt of {item.description}",
+            quantity=qty,
+            unit_cost=cost,
+            total_cost=qty * cost,
+            source_module="INV",
+            is_posted=True,
+            posted_by=user.id,
+            posted_at=datetime.now()
+        )
+        db.add(inv_transaction)
+        
+        # Update item quantity on hand
+        item.quantity_on_hand += qty
+    
+    # Create inventory issues
+    issue_data = [
+        {"item": "PROD001", "qty": 30, "cost": 150.00, "ref": "ISS-2024-001"},
+        {"item": "PROD003", "qty": 10, "cost": 500.00, "ref": "ISS-2024-002"}
+    ]
+    
+    for iss_data in issue_data:
+        item = items[iss_data["item"]]
+        qty = Decimal(str(iss_data["qty"]))
+        cost = Decimal(str(iss_data["cost"]))
+        
+        inv_transaction = InventoryTransaction(
+            company_id=company_id,
+            item_id=item.id,
+            transaction_type_id=issue_type.id,
+            accounting_period_id=current_period.id,
+            transaction_date=date.today() - timedelta(days=10),
+            reference_number=iss_data["ref"],
+            description=f"Issue of {item.description}",
+            quantity=-qty,  # Negative for issues
+            unit_cost=cost,
+            total_cost=qty * cost,
+            source_module="INV",
+            is_posted=True,
+            posted_by=user.id,
+            posted_at=datetime.now()
+        )
+        db.add(inv_transaction)
+        
+        # Update item quantity on hand
+        item.quantity_on_hand -= qty
+    
+    db.commit()
+    print(f"✅ Created {len(receipt_data) + len(issue_data)} inventory transactions")
+
+
+def create_aging_periods(db, company_id):
+    """Create aging periods for AR/AP reporting"""
+    print("Creating Aging Periods...")
+    
+    aging_periods_data = [
+        {"name": "Current", "from": 0, "to": 30, "order": 1},
+        {"name": "31-60 Days", "from": 31, "to": 60, "order": 2},
+        {"name": "61-90 Days", "from": 61, "to": 90, "order": 3},
+        {"name": "Over 90 Days", "from": 91, "to": 999, "order": 4}
+    ]
+    
+    aging_periods = []
+    for period_data in aging_periods_data:
+        aging_period = AgeingPeriod(
+            company_id=company_id,
+            period_name=period_data["name"],
+            days_from=period_data["from"],
+            days_to=period_data["to"],
+            sort_order=period_data["order"],
+            is_active=True
+        )
+        db.add(aging_period)
+        aging_periods.append(aging_period)
+    
+    db.commit()
+    print(f"✅ Created {len(aging_periods)} aging periods")
+    return aging_periods
+
+
+def main():
+    """Main function to create comprehensive test data"""
+    print_section("rwanly ERP Comprehensive Test Data Creation")
+    print("This will create a complete test environment with sample data")
+    print("across all implemented modules including:")
+    print("• Company, Users, and Roles")
+    print("• Chart of Accounts")
+    print("• Accounting Periods")
+    print("• Customers and Suppliers") 
+    print("• Inventory Items")
+    print("• Transaction Types")
+    print("• Sample Transactions")
+    print("• Aging Periods")
+    
+    db = SessionLocal()
+    
+    try:
+        # Create core company data
+        print_section("Core Company Setup")
+        company = create_test_company(db)
+        users = create_roles_and_users(db, company.id)
+        
+        # Create accounting structure
+        print_section("Accounting Structure")
+        periods = create_accounting_periods(db, company.id)
+        accounts = create_chart_of_accounts(db, company.id)
+        aging_periods = create_aging_periods(db, company.id)
+        
+        # Create master data
+        print_section("Master Data")
+        customers = create_customers(db, company.id, accounts["1100"].id)
+        suppliers = create_suppliers(db, company.id)
+        items = create_inventory_items(db, company.id, accounts)
+        
+        # Create transaction types
+        print_section("Transaction Types")
+        ar_types, ap_types, inv_types = create_transaction_types(db, company.id, accounts)
+        
+        # Create sample transactions
+        print_section("Sample Transactions")
+        create_sample_transactions(
+            db, company.id, users, accounts, customers, suppliers, 
+            items, periods, ar_types, ap_types, inv_types
+        )
+        
+        print_section("Test Data Creation Complete!")
+        print(f"🎉 Successfully created comprehensive test data for {company.name}")
+        print(f"\n📊 Data Summary:")
+        print(f"   • Company: {company.name}")
+        print(f"   • Users: {len(users)} (with different roles)")
+        print(f"   • GL Accounts: {len(accounts)}")
+        print(f"   • Accounting Periods: {len(periods)}")
+        print(f"   • Customers: {len(customers)}")
+        print(f"   • Suppliers: {len(suppliers)}")
+        print(f"   • Inventory Items: {len(items)}")
+        print(f"   • Aging Periods: {len(aging_periods)}")
+        
+        print(f"\n🔑 Login Credentials:")
+        for role, user in users.items():
+            password = {
+                "Administrator": "admin123",
+                "Accountant": "accountant123", 
+                "Sales": "sales123",
+                "Clerk": "clerk123"
+            }.get(role, "password123")
+            print(f"   {role}: {user.email} / {password}")
+        
+        print(f"\n🌐 API Base URL: http://localhost:8000")
+        print(f"📖 API Documentation: http://localhost:8000/docs")
         
     except Exception as e:
         print(f"❌ Error creating test data: {e}")
         db.rollback()
+        raise
     finally:
         db.close()
 
+
 if __name__ == "__main__":
-    create_test_data()
+    main()
