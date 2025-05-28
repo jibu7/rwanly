@@ -2,10 +2,20 @@
 """
 Comprehensive Test Data Creation Script for rwanly ERP
 Creates a complete test environment with sample data across all modules
-"""
 
-import sys
+🔑 Login Credentials:
+Administrator: admin@techflow.com / admin123
+Accountant: accountant@techflow.com / accountant123
+Sales: sales@techflow.com / sales123
+Clerk: clerk@techflow.com / clerk123
+
+Test Data Includes:
+- 8 AR transactions (5 invoices + 3 payments)
+- 4 AP transactions (bills)
+- 5 inventory transactions (3 receipts + 2 issues)
+"""
 import os
+import sys
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 
@@ -164,23 +174,20 @@ def create_accounting_periods(db, company_id):
     # Create periods for last year and this year
     for year in [current_year - 1, current_year]:
         for month in range(1, 13):
-            # Calculate start and end dates
             start_date = date(year, month, 1)
+            # Calculate end date
             if month == 12:
                 end_date = date(year + 1, 1, 1) - timedelta(days=1)
             else:
                 end_date = date(year, month + 1, 1) - timedelta(days=1)
             
-            # Previous year periods are closed, current year periods are open
-            is_closed = (year < current_year)
-            
             period = AccountingPeriod(
                 company_id=company_id,
-                period_name=f"{start_date.strftime('%B')} {year}",
+                period_name=f"{start_date.strftime('%B %Y')}",
                 start_date=start_date,
                 end_date=end_date,
-                financial_year=year,
-                is_closed=is_closed
+                financial_year=year,  # Fixed: use financial_year not fiscal_year
+                is_closed=(year == current_year - 1)  # Close previous year
             )
             db.add(period)
             periods.append(period)
@@ -265,7 +272,7 @@ def create_chart_of_accounts(db, company_id):
     return accounts
 
 
-def create_customers(db, company_id, ar_receivable_account_id):
+def create_customers(db, company_id):
     """Create comprehensive customer data"""
     print("Creating Customers...")
     
@@ -308,32 +315,6 @@ def create_customers(db, company_id, ar_receivable_account_id):
             "zip": "95113", 
             "terms": 45,
             "credit_limit": 100000.00
-        },
-        {
-            "code": "CUST004",
-            "name": "StartupXYZ",
-            "contact": "Emily Johnson",
-            "email": "emily@startupxyz.com",
-            "phone": "+1-555-0104",
-            "address": "321 Venture Way",
-            "city": "Mountain View",
-            "state": "CA",
-            "zip": "94041",
-            "terms": 30,
-            "credit_limit": 15000.00
-        },
-        {
-            "code": "CUST005",
-            "name": "Enterprise Solutions Corp",
-            "contact": "David Brown",
-            "email": "david.brown@entcorp.com",
-            "phone": "+1-555-0105",
-            "address": "555 Corporate Plaza",
-            "city": "Santa Clara",
-            "state": "CA",
-            "zip": "95051",
-            "terms": 60,
-            "credit_limit": 75000.00
         }
     ]
     
@@ -407,19 +388,6 @@ def create_suppliers(db, company_id):
             "zip": "94544",
             "terms": 45,
             "credit_limit": 50000.00
-        },
-        {
-            "code": "SUPP004",
-            "name": "Software Licensing Corp",
-            "contact": "Nancy White",
-            "email": "nancy@softlicense.com",
-            "phone": "+1-555-0204",
-            "address": "400 Software Blvd",
-            "city": "Redwood City",
-            "state": "CA",
-            "zip": "94063",
-            "terms": 30,
-            "credit_limit": 30000.00
         }
     ]
     
@@ -611,61 +579,62 @@ def create_transaction_types(db, company_id, accounts):
 
 
 def create_sample_transactions(db, company_id, users, accounts, customers, suppliers, items, periods, ar_types, ap_types, inv_types):
-    """Create comprehensive sample transactions"""
+    """Create comprehensive sample transactions - 8 AR, 4 AP, 5 Inventory"""
     print("Creating Sample Transactions...")
     
-    # Get current period
+    # Get current period and user
     current_period = next((p for p in periods if not p.is_closed), periods[-1])
     user = users["Accountant"]
     
-    # Sample AR Transactions
-    ar_transactions = []
+    print("📊 Creating 8 AR Transactions (5 Invoices + 3 Payments)...")
+    
+    # AR Transactions: 5 Invoices
     invoice_type = ar_types["INV"]
     payment_type = ar_types["PMT"]
     
-    # Create some invoices
     invoice_data = [
-        {"customer": "CUST001", "amount": 5000.00, "ref": "INV-2024-001", "desc": "Software licensing fees"},
-        {"customer": "CUST002", "amount": 2500.00, "ref": "INV-2024-002", "desc": "Technical support services"},
-        {"customer": "CUST003", "amount": 15000.00, "ref": "INV-2024-003", "desc": "Enterprise platform setup"},
-        {"customer": "CUST004", "amount": 1200.00, "ref": "INV-2024-004", "desc": "Cloud storage subscription"},
-        {"customer": "CUST005", "amount": 8500.00, "ref": "INV-2024-005", "desc": "Custom development work"}
+        {"customer": "CUST001", "amount": 5000.00, "ref": "INV-2024-001", "desc": "Software licensing fees", "days_ago": 30},
+        {"customer": "CUST002", "amount": 2500.00, "ref": "INV-2024-002", "desc": "Technical support services", "days_ago": 25},
+        {"customer": "CUST003", "amount": 15000.00, "ref": "INV-2024-003", "desc": "Enterprise platform setup", "days_ago": 20},
+        {"customer": "CUST001", "amount": 3200.00, "ref": "INV-2024-004", "desc": "Cloud storage subscription", "days_ago": 15},
+        {"customer": "CUST002", "amount": 8500.00, "ref": "INV-2024-005", "desc": "Custom development work", "days_ago": 10}
     ]
     
     for inv_data in invoice_data:
         customer = customers[inv_data["customer"]]
         amount = Decimal(str(inv_data["amount"]))
+        tax_amount = amount * Decimal('0.0875')
+        net_amount = amount + tax_amount
         
         ar_transaction = ARTransaction(
             company_id=company_id,
             customer_id=customer.id,
             transaction_type_id=invoice_type.id,
             accounting_period_id=current_period.id,
-            transaction_date=date.today() - timedelta(days=30),
-            due_date=date.today() + timedelta(days=30),
+            transaction_date=date.today() - timedelta(days=inv_data["days_ago"]),
+            due_date=date.today() + timedelta(days=customer.payment_terms_days - inv_data["days_ago"]),
             reference_number=inv_data["ref"],
             description=inv_data["desc"],
             gross_amount=amount,
-            tax_amount=amount * Decimal('0.0875'),  # 8.75% tax
+            tax_amount=tax_amount,
             discount_amount=Decimal('0.00'),
-            net_amount=amount + (amount * Decimal('0.0875')),
-            outstanding_amount=amount + (amount * Decimal('0.0875')),
+            net_amount=net_amount,
+            outstanding_amount=net_amount,
             source_module="AR",
             is_posted=True,
             posted_by=user.id,
-            posted_at=datetime.now()
+            posted_at=datetime.now() - timedelta(days=inv_data["days_ago"])
         )
         db.add(ar_transaction)
-        ar_transactions.append(ar_transaction)
         
         # Update customer balance
-        customer.current_balance += ar_transaction.net_amount
+        customer.current_balance += net_amount
     
-    # Create some payments
+    # AR Transactions: 3 Payments
     payment_data = [
-        {"customer": "CUST001", "amount": 3000.00, "ref": "PMT-2024-001"},
-        {"customer": "CUST002", "amount": 2500.00, "ref": "PMT-2024-002"},
-        {"customer": "CUST003", "amount": 10000.00, "ref": "PMT-2024-003"}
+        {"customer": "CUST001", "amount": 4000.00, "ref": "PMT-2024-001", "days_ago": 15},
+        {"customer": "CUST002", "amount": 2500.00, "ref": "PMT-2024-002", "days_ago": 10},
+        {"customer": "CUST003", "amount": 10000.00, "ref": "PMT-2024-003", "days_ago": 5}
     ]
     
     for pmt_data in payment_data:
@@ -677,7 +646,7 @@ def create_sample_transactions(db, company_id, users, accounts, customers, suppl
             customer_id=customer.id,
             transaction_type_id=payment_type.id,
             accounting_period_id=current_period.id,
-            transaction_date=date.today() - timedelta(days=15),
+            transaction_date=date.today() - timedelta(days=pmt_data["days_ago"]),
             reference_number=pmt_data["ref"],
             description=f"Payment received from {customer.name}",
             gross_amount=amount,
@@ -688,70 +657,65 @@ def create_sample_transactions(db, company_id, users, accounts, customers, suppl
             source_module="AR",
             is_posted=True,
             posted_by=user.id,
-            posted_at=datetime.now()
+            posted_at=datetime.now() - timedelta(days=pmt_data["days_ago"])
         )
         db.add(ar_transaction)
         
         # Update customer balance
         customer.current_balance -= amount
     
-    db.commit()
-    print(f"✅ Created {len(ar_transactions) + len(payment_data)} AR transactions")
+    print("📋 Creating 4 AP Transactions (Bills)...")
     
-    # Sample AP Transactions
-    ap_transactions = []
+    # AP Transactions: 4 Bills
     bill_type = ap_types["BILL"]
-    ap_payment_type = ap_types["PMT"]
     
-    # Create some bills
     bill_data = [
-        {"supplier": "SUPP001", "amount": 3000.00, "ref": "BILL-2024-001", "desc": "Computer hardware purchase"},
-        {"supplier": "SUPP002", "amount": 500.00, "ref": "BILL-2024-002", "desc": "Office supplies"},
-        {"supplier": "SUPP003", "amount": 7500.00, "ref": "BILL-2024-003", "desc": "Raw materials"},
-        {"supplier": "SUPP004", "amount": 1200.00, "ref": "BILL-2024-004", "desc": "Software licenses"}
+        {"supplier": "SUPP001", "amount": 3000.00, "ref": "BILL-2024-001", "desc": "Computer hardware purchase", "days_ago": 25},
+        {"supplier": "SUPP002", "amount": 500.00, "ref": "BILL-2024-002", "desc": "Office supplies", "days_ago": 20},
+        {"supplier": "SUPP003", "amount": 7500.00, "ref": "BILL-2024-003", "desc": "Raw materials", "days_ago": 15},
+        {"supplier": "SUPP001", "amount": 1200.00, "ref": "BILL-2024-004", "desc": "Software licenses", "days_ago": 10}
     ]
     
-    for bill_data in bill_data:
-        supplier = suppliers[bill_data["supplier"]]
-        amount = Decimal(str(bill_data["amount"]))
+    for bill_data_item in bill_data:
+        supplier = suppliers[bill_data_item["supplier"]]
+        amount = Decimal(str(bill_data_item["amount"]))
+        tax_amount = amount * Decimal('0.0875')
+        net_amount = amount + tax_amount
         
         ap_transaction = APTransaction(
             company_id=company_id,
             supplier_id=supplier.id,
             transaction_type_id=bill_type.id,
             accounting_period_id=current_period.id,
-            transaction_date=date.today() - timedelta(days=25),
-            due_date=date.today() + timedelta(days=supplier.payment_terms_days),
-            reference_number=bill_data["ref"],
-            description=bill_data["desc"],
+            transaction_date=date.today() - timedelta(days=bill_data_item["days_ago"]),
+            due_date=date.today() + timedelta(days=supplier.payment_terms_days - bill_data_item["days_ago"]),
+            reference_number=bill_data_item["ref"],
+            description=bill_data_item["desc"],
             gross_amount=amount,
-            tax_amount=amount * Decimal('0.0875'),  # 8.75% tax
+            tax_amount=tax_amount,
             discount_amount=Decimal('0.00'),
-            net_amount=amount + (amount * Decimal('0.0875')),
-            outstanding_amount=amount + (amount * Decimal('0.0875')),
+            net_amount=net_amount,
+            outstanding_amount=net_amount,
             source_module="AP",
             is_posted=True,
             posted_by=user.id,
-            posted_at=datetime.now()
+            posted_at=datetime.now() - timedelta(days=bill_data_item["days_ago"])
         )
         db.add(ap_transaction)
-        ap_transactions.append(ap_transaction)
         
         # Update supplier balance
-        supplier.current_balance += ap_transaction.net_amount
+        supplier.current_balance += net_amount
     
-    db.commit()
-    print(f"✅ Created {len(ap_transactions)} AP transactions")
+    print("📦 Creating 5 Inventory Transactions (3 Receipts + 2 Issues)...")
     
-    # Sample Inventory Transactions
+    # Inventory Transactions: 3 Receipts
     receipt_type = inv_types["REC"]
     issue_type = inv_types["ISS"]
     
-    # Create inventory receipts
     receipt_data = [
-        {"item": "PROD001", "qty": 100, "cost": 150.00, "ref": "REC-2024-001"},
-        {"item": "PROD003", "qty": 50, "cost": 500.00, "ref": "REC-2024-002"},
-        {"item": "PROD001", "qty": 25, "cost": 145.00, "ref": "REC-2024-003"}
+        {"item": "PROD001", "qty": 100, "cost": 150.00, "ref": "REC-2024-001", "days_ago": 20},
+        {"item": "PROD003", "qty": 50, "cost": 500.00, "ref": "REC-2024-002", "days_ago": 15},
+        {"item": "PROD001", "qty": 25, "cost": 145.00, "ref": "REC-2024-003", "days_ago": 10}
     ]
     
     for rec_data in receipt_data:
@@ -764,7 +728,7 @@ def create_sample_transactions(db, company_id, users, accounts, customers, suppl
             item_id=item.id,
             transaction_type_id=receipt_type.id,
             accounting_period_id=current_period.id,
-            transaction_date=date.today() - timedelta(days=20),
+            transaction_date=date.today() - timedelta(days=rec_data["days_ago"]),
             reference_number=rec_data["ref"],
             description=f"Receipt of {item.description}",
             quantity=qty,
@@ -773,17 +737,17 @@ def create_sample_transactions(db, company_id, users, accounts, customers, suppl
             source_module="INV",
             is_posted=True,
             posted_by=user.id,
-            posted_at=datetime.now()
+            posted_at=datetime.now() - timedelta(days=rec_data["days_ago"])
         )
         db.add(inv_transaction)
         
         # Update item quantity on hand
         item.quantity_on_hand += qty
     
-    # Create inventory issues
+    # Inventory Transactions: 2 Issues
     issue_data = [
-        {"item": "PROD001", "qty": 30, "cost": 150.00, "ref": "ISS-2024-001"},
-        {"item": "PROD003", "qty": 10, "cost": 500.00, "ref": "ISS-2024-002"}
+        {"item": "PROD001", "qty": 30, "cost": 150.00, "ref": "ISS-2024-001", "days_ago": 8},
+        {"item": "PROD003", "qty": 10, "cost": 500.00, "ref": "ISS-2024-002", "days_ago": 5}
     ]
     
     for iss_data in issue_data:
@@ -796,16 +760,16 @@ def create_sample_transactions(db, company_id, users, accounts, customers, suppl
             item_id=item.id,
             transaction_type_id=issue_type.id,
             accounting_period_id=current_period.id,
-            transaction_date=date.today() - timedelta(days=10),
+            transaction_date=date.today() - timedelta(days=iss_data["days_ago"]),
             reference_number=iss_data["ref"],
             description=f"Issue of {item.description}",
-            quantity=-qty,  # Negative for issues
+            quantity=qty,
             unit_cost=cost,
             total_cost=qty * cost,
             source_module="INV",
             is_posted=True,
             posted_by=user.id,
-            posted_at=datetime.now()
+            posted_at=datetime.now() - timedelta(days=iss_data["days_ago"])
         )
         db.add(inv_transaction)
         
@@ -813,7 +777,10 @@ def create_sample_transactions(db, company_id, users, accounts, customers, suppl
         item.quantity_on_hand -= qty
     
     db.commit()
-    print(f"✅ Created {len(receipt_data) + len(issue_data)} inventory transactions")
+    print("✅ Created all sample transactions:")
+    print("   • 8 AR transactions (5 invoices + 3 payments)")
+    print("   • 4 AP transactions (bills)")
+    print("   • 5 inventory transactions (3 receipts + 2 issues)")
 
 
 def create_aging_periods(db, company_id):
@@ -848,75 +815,84 @@ def create_aging_periods(db, company_id):
 def main():
     """Main function to create comprehensive test data"""
     print_section("rwanly ERP Comprehensive Test Data Creation")
-    print("This will create a complete test environment with sample data")
-    print("across all implemented modules including:")
-    print("• Company, Users, and Roles")
-    print("• Chart of Accounts")
-    print("• Accounting Periods")
-    print("• Customers and Suppliers") 
-    print("• Inventory Items")
-    print("• Transaction Types")
-    print("• Sample Transactions")
-    print("• Aging Periods")
+    print("🚀 Creating complete test environment with inventory capabilities")
+    print("\n📋 Test Data Summary:")
+    print("   • Company, Users, and Roles")
+    print("   • Chart of Accounts")
+    print("   • Accounting Periods")
+    print("   • 3 Customers and 3 Suppliers") 
+    print("   • 5 Inventory Items")
+    print("   • Transaction Types")
+    print("   • 8 AR Transactions (5 invoices + 3 payments)")
+    print("   • 4 AP Transactions (bills)")
+    print("   • 5 Inventory Transactions (3 receipts + 2 issues)")
+    print("   • Aging Periods")
+    
+    print("\n🔑 Login Credentials:")
+    print("   Administrator: admin@techflow.com / admin123")
+    print("   Accountant: accountant@techflow.com / accountant123")
+    print("   Sales: sales@techflow.com / sales123")
+    print("   Clerk: clerk@techflow.com / clerk123")
     
     db = SessionLocal()
     
     try:
-        # Create core company data
-        print_section("Core Company Setup")
+        print_section("Creating Core Data")
+        
+        # Create company
         company = create_test_company(db)
+        
+        # Create users and roles
         users = create_roles_and_users(db, company.id)
         
-        # Create accounting structure
-        print_section("Accounting Structure")
+        # Create accounting periods
         periods = create_accounting_periods(db, company.id)
-        accounts = create_chart_of_accounts(db, company.id)
-        aging_periods = create_aging_periods(db, company.id)
         
-        # Create master data
-        print_section("Master Data")
-        customers = create_customers(db, company.id, accounts["1100"].id)
+        # Create chart of accounts
+        accounts = create_chart_of_accounts(db, company.id)
+        
+        print_section("Creating Master Data")
+        
+        # Create customers
+        customers = create_customers(db, company.id)
+        
+        # Create suppliers
         suppliers = create_suppliers(db, company.id)
+        
+        # Create inventory items
         items = create_inventory_items(db, company.id, accounts)
         
         # Create transaction types
-        print_section("Transaction Types")
         ar_types, ap_types, inv_types = create_transaction_types(db, company.id, accounts)
         
+        # Create aging periods
+        aging_periods = create_aging_periods(db, company.id)
+        
+        print_section("Creating Sample Transactions")
+        
         # Create sample transactions
-        print_section("Sample Transactions")
         create_sample_transactions(
             db, company.id, users, accounts, customers, suppliers, 
             items, periods, ar_types, ap_types, inv_types
         )
         
-        print_section("Test Data Creation Complete!")
-        print(f"🎉 Successfully created comprehensive test data for {company.name}")
-        print(f"\n📊 Data Summary:")
+        print_section("Test Data Creation Complete")
+        print("🎉 SUCCESS! Comprehensive test data created successfully!")
+        print("\n📊 Summary:")
         print(f"   • Company: {company.name}")
-        print(f"   • Users: {len(users)} (with different roles)")
+        print(f"   • Users: {len(users)} with roles")
         print(f"   • GL Accounts: {len(accounts)}")
         print(f"   • Accounting Periods: {len(periods)}")
         print(f"   • Customers: {len(customers)}")
         print(f"   • Suppliers: {len(suppliers)}")
         print(f"   • Inventory Items: {len(items)}")
+        print(f"   • Transaction Types: AR({len(ar_types)}), AP({len(ap_types)}), INV({len(inv_types)})")
         print(f"   • Aging Periods: {len(aging_periods)}")
-        
-        print(f"\n🔑 Login Credentials:")
-        for role, user in users.items():
-            password = {
-                "Administrator": "admin123",
-                "Accountant": "accountant123", 
-                "Sales": "sales123",
-                "Clerk": "clerk123"
-            }.get(role, "password123")
-            print(f"   {role}: {user.email} / {password}")
-        
-        print(f"\n🌐 API Base URL: http://localhost:8000")
-        print(f"📖 API Documentation: http://localhost:8000/docs")
+        print("\n🔑 Ready to login with the credentials above!")
+        print("🎯 Perfect for testing inventory management capabilities!")
         
     except Exception as e:
-        print(f"❌ Error creating test data: {e}")
+        print(f"\n❌ ERROR: {str(e)}")
         db.rollback()
         raise
     finally:
