@@ -29,6 +29,10 @@ class UserResponse(UserBase):
     id: int
     company_id: int
     created_at: datetime
+    permissions: List[Dict[str, str]] = []  # Frontend expects [{"resource": "inventory", "action": "read"}]
+    permission_strings: List[str] = []  # Backend permission strings like ["inventory_items:read"]
+    role: Optional[str] = None  # User's primary role name
+    name: Optional[str] = None  # Display name (first_name + last_name)
     
     class Config:
         from_attributes = True

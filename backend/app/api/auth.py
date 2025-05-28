@@ -4,12 +4,12 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from datetime import timedelta
 
-from app.database import get_db
+from app.database.database import get_db
 from app.schemas import UserResponse, UserCreate, UserUpdate, Token, LoginRequest
-from app.crud import user_crud
+from app.crud.core import user_crud
 from app.core.security import verify_password, create_access_token, verify_token
 from app.core.permissions import check_permission, Permissions
-from app.models import User
+from app.models.core import User
 
 router = APIRouter()
 
@@ -87,9 +87,109 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
 
 
 @router.get("/me", response_model=UserResponse)
-async def read_users_me(current_user: User = Depends(get_current_active_user)):
-    """Get current user information"""
-    return current_user
+async def read_users_me(current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db)):
+    """Get current user information with permissions"""
+    # Collect all permissions from user's roles
+    permission_strings = []
+    for user_role in current_user.user_roles:
+        role_permissions = user_role.role.permissions or []
+        permission_strings.extend(role_permissions)
+    
+    # Remove duplicates
+    permission_strings = list(set(permission_strings))
+    
+    # Convert backend permission strings to frontend Permission objects
+    permissions = []
+    for perm_str in permission_strings:
+        frontend_resource = None
+        action = None
+        
+        if ':' in perm_str:
+            parts = perm_str.split(':')
+            if len(parts) >= 3:
+                module = parts[0]
+                resource = parts[1] 
+                action = parts[2]
+                
+                # Map specific backend permissions to frontend resources
+                if module == 'inv' or resource.startswith('inventory'):
+                    frontend_resource = 'inventory'
+                elif module == 'gl' or module == 'general_ledger':
+                    frontend_resource = 'general_ledger'
+                elif module == 'ar' or module == 'accounts_receivable':
+                    frontend_resource = 'accounts_receivable'
+                elif module == 'ap' or module == 'accounts_payable':
+                    frontend_resource = 'accounts_payable'
+                elif module == 'oe' or module == 'order_entry':
+                    frontend_resource = 'order_entry'
+                elif module == 'sys':
+                    if resource == 'user':
+                        frontend_resource = 'users'
+                    elif resource == 'role':
+                        frontend_resource = 'roles'
+                    elif resource == 'company':
+                        frontend_resource = 'companies'
+                    elif resource == 'accounting_period':
+                        frontend_resource = 'accounting_periods'
+        
+        # Handle permissions with underscore format like "inventory_items:read"
+        elif '_' in perm_str and ':' in perm_str:
+            parts = perm_str.split(':')
+            if len(parts) >= 2:
+                resource_part = parts[0]
+                action = parts[1]
+                
+                if resource_part.startswith('inventory'):
+                    frontend_resource = 'inventory'
+                elif resource_part.startswith('gl') or resource_part == 'general_ledger':
+                    frontend_resource = 'general_ledger'
+                elif resource_part.startswith('ar') or resource_part == 'accounts_receivable':
+                    frontend_resource = 'accounts_receivable'
+                elif resource_part.startswith('ap') or resource_part == 'accounts_payable':
+                    frontend_resource = 'accounts_payable'
+        
+        if frontend_resource and action:
+            permissions.append({
+                "resource": frontend_resource,
+                "action": action
+            })
+    
+    # Remove duplicate permissions
+    seen = set()
+    unique_permissions = []
+    for perm in permissions:
+        perm_tuple = (perm["resource"], perm["action"])
+        if perm_tuple not in seen:
+            seen.add(perm_tuple)
+            unique_permissions.append(perm)
+    
+    # Get primary role name
+    primary_role = None
+    if current_user.user_roles:
+        primary_role = current_user.user_roles[0].role.name
+    
+    # Create display name
+    name = None
+    if current_user.first_name or current_user.last_name:
+        name = f"{current_user.first_name or ''} {current_user.last_name or ''}".strip()
+    
+    # Create response with permissions
+    response_data = {
+        "id": current_user.id,
+        "username": current_user.username,
+        "email": current_user.email,
+        "first_name": current_user.first_name,
+        "last_name": current_user.last_name,
+        "is_active": current_user.is_active,
+        "company_id": current_user.company_id,
+        "created_at": current_user.created_at,
+        "permissions": unique_permissions,
+        "permission_strings": permission_strings,
+        "role": primary_role,
+        "name": name
+    }
+    
+    return response_data
 
 
 @router.post("/logout")

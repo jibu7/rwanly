@@ -16,10 +16,22 @@ router = APIRouter()
 async def get_companies(
     skip: int = 0,
     limit: int = 100,
-    current_user: User = Depends(require_permission(Permissions.SYS_COMPANY_READ)),
+    current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
     """Get all companies (admin only)"""
+    # Check if user has SYS_COMPANY_READ permission
+    user_permissions = []
+    for user_role in current_user.user_roles:
+        role_permissions = user_role.role.permissions or []
+        user_permissions.extend(role_permissions)
+    
+    if not (Permissions.SYS_COMPANY_READ in user_permissions or "all" in user_permissions):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not enough permissions"
+        )
+    
     companies = company_crud.get_all(db, skip=skip, limit=limit)
     return companies
 

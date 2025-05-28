@@ -8,6 +8,62 @@
 			"group": "build",
 			"isBackground": false,
 			"problemMatcher": []
+		},
+		{
+			"label": "Run Transaction Behavior Tests",
+			"type": "shell",
+			"command": "cd backend && python -m pytest test_transaction_behavior_*.py -v --tb=short",
+			"group": "test",
+			"isBackground": false,
+			"problemMatcher": ["$python"]
+		},
+		{
+			"label": "Run GL Behavior Tests",
+			"type": "shell",
+			"command": "cd backend && python -m pytest test_transaction_behavior_gl.py -v",
+			"group": "test",
+			"isBackground": false,
+			"problemMatcher": ["$python"]
+		},
+		{
+			"label": "Run AR Behavior Tests",
+			"type": "shell",
+			"command": "cd backend && python -m pytest test_transaction_behavior_ar.py -v",
+			"group": "test",
+			"isBackground": false,
+			"problemMatcher": ["$python"]
+		},
+		{
+			"label": "Run AP Behavior Tests",
+			"type": "shell",
+			"command": "cd backend && python -m pytest test_transaction_behavior_ap.py -v",
+			"group": "test",
+			"isBackground": false,
+			"problemMatcher": ["$python"]
+		},
+		{
+			"label": "Run Inventory Behavior Tests",
+			"type": "shell",
+			"command": "cd backend && python -m pytest test_transaction_behavior_inventory.py -v",
+			"group": "test",
+			"isBackground": false,
+			"problemMatcher": ["$python"]
+		},
+		{
+			"label": "Run Order Entry Behavior Tests",
+			"type": "shell",
+			"command": "cd backend && python -m pytest test_transaction_behavior_orders.py -v",
+			"group": "test",
+			"isBackground": false,
+			"problemMatcher": ["$python"]
+		},
+		{
+			"label": "Run All Backend Tests",
+			"type": "shell",
+			"command": "cd backend && python -m pytest -v --tb=short",
+			"group": "test",
+			"isBackground": false,
+			"problemMatcher": ["$python"]
 		}
 	]
 }

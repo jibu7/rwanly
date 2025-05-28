@@ -148,39 +148,98 @@ def get_all_permissions() -> List[str]:
     ]
 
 
-def check_permission(user_permissions: List[str], required_permission: str) -> bool:
-    """Check if user has the required permission"""
-    return required_permission in user_permissions
+def check_permission(user_or_permissions, module_or_permission, action=None):
+    """
+    Check if user has the required permission.
+    
+    This function handles two formats:
+    1. check_permission(user, "module", "action") - Used in API modules
+    2. check_permission(user_permissions, "module:action") - Used in auth middleware
+    
+    Args:
+        user_or_permissions: Either a User object or a list of permission strings
+        module_or_permission: Either a module name or a permission string
+        action: Optional action name when using format #1
+        
+    Returns:
+        bool: True if the user has the required permission
+    """
+    user_permissions = []
+    
+    # Handle user object vs direct permissions list
+    if isinstance(user_or_permissions, list):
+        user_permissions = user_or_permissions
+    else:
+        # It's a user object, extract permissions from roles
+        user = user_or_permissions
+        for user_role in user.user_roles:
+            role_permissions = user_role.role.permissions or []
+            user_permissions.extend(role_permissions)
+    
+    # Format the required permission based on which signature was used
+    required_permission = None
+    if action is None:
+        # Format #2: permission string was provided directly
+        required_permission = module_or_permission
+    else:
+        # Format #1: module and action were provided separately
+        required_permission = f"{module_or_permission}:{action}"
+    
+    # Check for exact permission match using both formats
+    # Check for standard format (e.g., "inventory_items:read")
+    if required_permission in user_permissions:
+        return True
+        
+    # Check for module:action format (e.g., "inventory_items:read")
+    if required_permission in user_permissions:
+        return True
+        
+    # Check for legacy format with underscore (e.g., "inventory_items_read")
+    legacy_format = required_permission.replace(":", "_")
+    if legacy_format in user_permissions:
+        return True
+    
+    # Check for "all" permission (admin wildcard)
+    if "all" in user_permissions:
+        return True
+        
+    return False
+    
+    return False
 
 
 # Default role permissions
 DEFAULT_ROLES = {
     "Administrator": get_all_permissions(),
     "Accountant": [
-        Permissions.SYS_USER_READ,
-        Permissions.SYS_COMPANY_READ,
+        # Remove SYS_USER_READ and SYS_COMPANY_READ - accountants should not manage users/companies
         Permissions.SYS_ACCOUNTING_PERIOD_READ,
         Permissions.SYS_ACCOUNTING_PERIOD_CREATE,
         Permissions.SYS_ACCOUNTING_PERIOD_UPDATE,
         Permissions.SYS_ACCOUNTING_PERIOD_CLOSE,
         Permissions.SYS_ACCOUNTING_PERIOD_REOPEN,
+        # General Ledger permissions
         Permissions.GL_ACCOUNT_CREATE,
         Permissions.GL_ACCOUNT_READ,
         Permissions.GL_ACCOUNT_UPDATE,
         Permissions.GL_JOURNAL_CREATE,
         Permissions.GL_JOURNAL_POST,
         Permissions.GL_REPORT_VIEW,
+        # Accounts Receivable permissions
         Permissions.AR_VIEW_CUSTOMERS,
+        Permissions.AR_VIEW_TRANSACTIONS,  # Add missing permission
         Permissions.AR_CREATE_TRANSACTIONS,
         Permissions.AR_POST_TRANSACTIONS,
         Permissions.AR_VIEW_REPORTS,
+        # Accounts Payable permissions
         Permissions.AP_SUPPLIER_READ,
+        Permissions.AP_VIEW_TRANSACTIONS,  # Add missing permission
         Permissions.AP_TRANSACTION_CREATE,
         Permissions.AP_TRANSACTION_POST,
         Permissions.AP_REPORT_VIEW,
     ],
     "Sales": [
-        Permissions.SYS_USER_READ,
+        # Remove SYS_USER_READ - sales should not access user management
         Permissions.AR_CREATE_CUSTOMERS,
         Permissions.AR_VIEW_CUSTOMERS,
         Permissions.AR_EDIT_CUSTOMERS,

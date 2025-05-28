@@ -95,12 +95,10 @@ async def get_gl_account(
 async def update_gl_account(
     account_id: int,
     account_update: GLAccountUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permissions.GL_ACCOUNT_UPDATE)),
     db: Session = Depends(get_db)
 ):
     """Update a General Ledger account - REQ-GL-COA-UPDATE"""
-    require_permission(current_user, "gl_account_update")
-    
     account = gl_account_crud.update_account(db, account_id, current_user.company_id, account_update)
     if not account:
         raise HTTPException(
@@ -113,12 +111,10 @@ async def update_gl_account(
 @router.delete("/accounts/{account_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_gl_account(
     account_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permissions.GL_ACCOUNT_UPDATE)),
     db: Session = Depends(get_db)
 ):
     """Delete a General Ledger account - REQ-GL-COA-DELETE"""
-    require_permission(current_user, "gl_account_delete")
-    
     success = gl_account_crud.delete_account(db, account_id, current_user.company_id)
     if not success:
         raise HTTPException(
@@ -131,11 +127,10 @@ async def delete_gl_account(
 @router.post("/transactions", response_model=GLTransactionResponse, status_code=status.HTTP_201_CREATED)
 async def create_gl_transaction(
     transaction: GLTransactionCreateRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permissions.GL_JOURNAL_CREATE)),
     db: Session = Depends(get_db)
 ):
     """Create a new General Ledger transaction - REQ-GL-TRANS-CREATE"""
-    require_permission(current_user, "gl_transaction_create")
     
     # Validate that the GL account exists and belongs to the company
     account = gl_account_crud.get_account(db, transaction.gl_account_id, current_user.company_id)
@@ -185,11 +180,10 @@ async def get_gl_transactions(
     period_id: Optional[int] = Query(None),
     start_date: Optional[date] = Query(None),
     end_date: Optional[date] = Query(None),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permissions.GL_JOURNAL_CREATE)),
     db: Session = Depends(get_db)
 ):
     """Get General Ledger transactions - REQ-GL-TRANS-READ"""
-    require_permission(current_user, "gl_transaction_read")
     
     return gl_transaction_crud.get_transactions(
         db, current_user.company_id, skip, limit, account_id, period_id, start_date, end_date
@@ -199,11 +193,10 @@ async def get_gl_transactions(
 @router.get("/transactions/{transaction_id}", response_model=GLTransactionResponse)
 async def get_gl_transaction(
     transaction_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permissions.GL_JOURNAL_CREATE)),
     db: Session = Depends(get_db)
 ):
     """Get a specific General Ledger transaction - REQ-GL-TRANS-READ"""
-    require_permission(current_user, "gl_transaction_read")
     
     transaction = gl_transaction_crud.get_transaction(db, transaction_id, current_user.company_id)
     if not transaction:
@@ -218,11 +211,10 @@ async def get_gl_transaction(
 async def update_gl_transaction(
     transaction_id: int,
     transaction_update: GLTransactionUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permissions.GL_JOURNAL_CREATE)),
     db: Session = Depends(get_db)
 ):
     """Update a General Ledger transaction - REQ-GL-TRANS-UPDATE"""
-    require_permission(current_user, "gl_transaction_update")
     
     try:
         transaction = gl_transaction_crud.update_transaction(db, transaction_id, current_user.company_id, transaction_update)
@@ -242,11 +234,10 @@ async def update_gl_transaction(
 @router.delete("/transactions/{transaction_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_gl_transaction(
     transaction_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permissions.GL_JOURNAL_CREATE)),
     db: Session = Depends(get_db)
 ):
     """Delete a General Ledger transaction - REQ-GL-TRANS-DELETE"""
-    require_permission(current_user, "gl_transaction_delete")
     
     try:
         success = gl_transaction_crud.delete_transaction(db, transaction_id, current_user.company_id)
@@ -266,11 +257,10 @@ async def delete_gl_transaction(
 @router.get("/reports/trial-balance/{period_id}", response_model=TrialBalanceResponse)
 async def get_trial_balance(
     period_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission(Permissions.GL_REPORT_VIEW)),
     db: Session = Depends(get_db)
 ):
     """Generate Trial Balance report - REQ-GL-REPORT-TB"""
-    require_permission(current_user, "gl_reports_read")
     
     # Get the accounting period
     period = accounting_period_crud.get_period(db, period_id, current_user.company_id)
