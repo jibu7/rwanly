@@ -14,10 +14,10 @@ Test Data Includes:
 - 4 AP transactions (bills)
 - 5 inventory transactions (3 receipts + 2 issues)
 """
-import os
-import sys
 from datetime import date, datetime, timedelta
 from decimal import Decimal
+import sys
+import os
 
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
@@ -175,19 +175,18 @@ def create_accounting_periods(db, company_id):
     for year in [current_year - 1, current_year]:
         for month in range(1, 13):
             start_date = date(year, month, 1)
-            # Calculate end date
             if month == 12:
-                end_date = date(year + 1, 1, 1) - timedelta(days=1)
+                end_date = date(year, 12, 31)
             else:
                 end_date = date(year, month + 1, 1) - timedelta(days=1)
             
             period = AccountingPeriod(
                 company_id=company_id,
-                period_name=f"{start_date.strftime('%B %Y')}",
+                period_name=f"{year}-{month:02d}",
                 start_date=start_date,
                 end_date=end_date,
-                financial_year=year,  # Fixed: use financial_year not fiscal_year
-                is_closed=(year == current_year - 1)  # Close previous year
+                financial_year=year,
+                is_closed=year < current_year or (year == current_year and month < datetime.now().month)
             )
             db.add(period)
             periods.append(period)
@@ -331,7 +330,7 @@ def create_customers(db, company_id):
             city=cust_data["city"],
             state=cust_data["state"],
             postal_code=cust_data["zip"],
-            country="United States",
+            country="USA",
             payment_terms_days=cust_data["terms"],
             credit_limit=Decimal(str(cust_data["credit_limit"])),
             current_balance=Decimal('0.00'),
@@ -404,9 +403,8 @@ def create_suppliers(db, company_id):
             city=supp_data["city"],
             state=supp_data["state"],
             postal_code=supp_data["zip"],
-            country="United States",
+            country="USA",
             payment_terms_days=supp_data["terms"],
-            credit_limit=Decimal(str(supp_data["credit_limit"])),
             current_balance=Decimal('0.00'),
             is_active=True
         )
@@ -480,11 +478,11 @@ def create_inventory_items(db, company_id, accounts):
             unit_of_measure=item_data["uom"],
             cost_price=Decimal(str(item_data["cost_price"])),
             selling_price=Decimal(str(item_data["selling_price"])),
-            costing_method="WEIGHTED_AVERAGE",
+            quantity_on_hand=Decimal('0'),
+            costing_method='WEIGHTED_AVERAGE',
             gl_asset_account_id=inventory_account.id,
             gl_expense_account_id=cogs_account.id,
             gl_revenue_account_id=sales_account.id,
-            quantity_on_hand=Decimal('0.00'),
             is_active=True
         )
         db.add(item)
@@ -519,9 +517,9 @@ def create_transaction_types(db, company_id, accounts):
             company_id=company_id,
             type_code=ar_data["code"],
             type_name=ar_data["name"],
-            description=f"AR transaction type for {ar_data['name'].lower()}",
+            description=f"Standard {ar_data['name']}",
             gl_account_id=ar_account.id,
-            default_income_account_id=sales_account.id if ar_data["code"] == "INV" else None,
+            default_income_account_id=sales_account.id,
             affects_balance=ar_data["balance"],
             is_active=True
         )
@@ -542,9 +540,9 @@ def create_transaction_types(db, company_id, accounts):
             company_id=company_id,
             type_code=ap_data["code"],
             type_name=ap_data["name"],
-            description=f"AP transaction type for {ap_data['name'].lower()}",
+            description=f"Standard {ap_data['name']}",
             gl_account_id=ap_account.id,
-            default_expense_account_id=cogs_account.id if ap_data["code"] == "BILL" else None,
+            default_expense_account_id=cogs_account.id,
             affects_balance=ap_data["balance"],
             is_active=True
         )
@@ -566,7 +564,7 @@ def create_transaction_types(db, company_id, accounts):
             company_id=company_id,
             type_code=inv_data["code"],
             type_name=inv_data["name"],
-            description=f"Inventory transaction type for {inv_data['name'].lower()}",
+            description=f"Standard {inv_data['name']}",
             affects_quantity=inv_data["effect"],
             is_active=True
         )
@@ -601,34 +599,30 @@ def create_sample_transactions(db, company_id, users, accounts, customers, suppl
     ]
     
     for inv_data in invoice_data:
-        customer = customers[inv_data["customer"]]
-        amount = Decimal(str(inv_data["amount"]))
-        tax_amount = amount * Decimal('0.0875')
-        net_amount = amount + tax_amount
+        trans_date = datetime.now() - timedelta(days=inv_data["days_ago"])
         
-        ar_transaction = ARTransaction(
+        invoice = ARTransaction(
             company_id=company_id,
-            customer_id=customer.id,
+            customer_id=customers[inv_data["customer"]].id,
             transaction_type_id=invoice_type.id,
-            accounting_period_id=current_period.id,
-            transaction_date=date.today() - timedelta(days=inv_data["days_ago"]),
-            due_date=date.today() + timedelta(days=customer.payment_terms_days - inv_data["days_ago"]),
+            transaction_date=trans_date,
+            due_date=trans_date + timedelta(days=30),
             reference_number=inv_data["ref"],
             description=inv_data["desc"],
-            gross_amount=amount,
-            tax_amount=tax_amount,
+            gross_amount=Decimal(str(inv_data["amount"])),
+            tax_amount=Decimal('0.00'),
             discount_amount=Decimal('0.00'),
-            net_amount=net_amount,
-            outstanding_amount=net_amount,
-            source_module="AR",
+            net_amount=Decimal(str(inv_data["amount"])),
+            outstanding_amount=Decimal(str(inv_data["amount"])),
+            accounting_period_id=current_period.id,
             is_posted=True,
             posted_by=user.id,
-            posted_at=datetime.now() - timedelta(days=inv_data["days_ago"])
+            posted_at=datetime.now()
         )
-        db.add(ar_transaction)
+        db.add(invoice)
         
         # Update customer balance
-        customer.current_balance += net_amount
+        customers[inv_data["customer"]].current_balance += Decimal(str(inv_data["amount"]))
     
     # AR Transactions: 3 Payments
     payment_data = [
@@ -638,31 +632,30 @@ def create_sample_transactions(db, company_id, users, accounts, customers, suppl
     ]
     
     for pmt_data in payment_data:
-        customer = customers[pmt_data["customer"]]
-        amount = Decimal(str(pmt_data["amount"]))
+        trans_date = datetime.now() - timedelta(days=pmt_data["days_ago"])
         
-        ar_transaction = ARTransaction(
+        payment = ARTransaction(
             company_id=company_id,
-            customer_id=customer.id,
+            customer_id=customers[pmt_data["customer"]].id,
             transaction_type_id=payment_type.id,
-            accounting_period_id=current_period.id,
-            transaction_date=date.today() - timedelta(days=pmt_data["days_ago"]),
+            transaction_date=trans_date,
+            due_date=trans_date,
             reference_number=pmt_data["ref"],
-            description=f"Payment received from {customer.name}",
-            gross_amount=amount,
+            description=f"Payment received from {customers[pmt_data['customer']].name}",
+            gross_amount=Decimal(str(pmt_data["amount"])),
             tax_amount=Decimal('0.00'),
             discount_amount=Decimal('0.00'),
-            net_amount=amount,
+            net_amount=Decimal(str(pmt_data["amount"])),
             outstanding_amount=Decimal('0.00'),
-            source_module="AR",
+            accounting_period_id=current_period.id,
             is_posted=True,
             posted_by=user.id,
-            posted_at=datetime.now() - timedelta(days=pmt_data["days_ago"])
+            posted_at=datetime.now()
         )
-        db.add(ar_transaction)
+        db.add(payment)
         
         # Update customer balance
-        customer.current_balance -= amount
+        customers[pmt_data["customer"]].current_balance -= Decimal(str(pmt_data["amount"]))
     
     print("📋 Creating 4 AP Transactions (Bills)...")
     
@@ -677,34 +670,30 @@ def create_sample_transactions(db, company_id, users, accounts, customers, suppl
     ]
     
     for bill_data_item in bill_data:
-        supplier = suppliers[bill_data_item["supplier"]]
-        amount = Decimal(str(bill_data_item["amount"]))
-        tax_amount = amount * Decimal('0.0875')
-        net_amount = amount + tax_amount
+        trans_date = datetime.now() - timedelta(days=bill_data_item["days_ago"])
         
-        ap_transaction = APTransaction(
+        bill = APTransaction(
             company_id=company_id,
-            supplier_id=supplier.id,
+            supplier_id=suppliers[bill_data_item["supplier"]].id,
             transaction_type_id=bill_type.id,
-            accounting_period_id=current_period.id,
-            transaction_date=date.today() - timedelta(days=bill_data_item["days_ago"]),
-            due_date=date.today() + timedelta(days=supplier.payment_terms_days - bill_data_item["days_ago"]),
+            transaction_date=trans_date,
+            due_date=trans_date + timedelta(days=30),
             reference_number=bill_data_item["ref"],
             description=bill_data_item["desc"],
-            gross_amount=amount,
-            tax_amount=tax_amount,
+            gross_amount=Decimal(str(bill_data_item["amount"])),
+            tax_amount=Decimal('0.00'),
             discount_amount=Decimal('0.00'),
-            net_amount=net_amount,
-            outstanding_amount=net_amount,
-            source_module="AP",
+            net_amount=Decimal(str(bill_data_item["amount"])),
+            outstanding_amount=Decimal(str(bill_data_item["amount"])),
+            accounting_period_id=current_period.id,
             is_posted=True,
             posted_by=user.id,
-            posted_at=datetime.now() - timedelta(days=bill_data_item["days_ago"])
+            posted_at=datetime.now()
         )
-        db.add(ap_transaction)
+        db.add(bill)
         
         # Update supplier balance
-        supplier.current_balance += net_amount
+        suppliers[bill_data_item["supplier"]].current_balance += Decimal(str(bill_data_item["amount"]))
     
     print("📦 Creating 5 Inventory Transactions (3 Receipts + 2 Issues)...")
     
@@ -719,30 +708,27 @@ def create_sample_transactions(db, company_id, users, accounts, customers, suppl
     ]
     
     for rec_data in receipt_data:
-        item = items[rec_data["item"]]
-        qty = Decimal(str(rec_data["qty"]))
-        cost = Decimal(str(rec_data["cost"]))
+        trans_date = datetime.now() - timedelta(days=rec_data["days_ago"])
         
-        inv_transaction = InventoryTransaction(
+        receipt = InventoryTransaction(
             company_id=company_id,
-            item_id=item.id,
+            item_id=items[rec_data["item"]].id,
             transaction_type_id=receipt_type.id,
-            accounting_period_id=current_period.id,
-            transaction_date=date.today() - timedelta(days=rec_data["days_ago"]),
+            transaction_date=trans_date,
             reference_number=rec_data["ref"],
-            description=f"Receipt of {item.description}",
-            quantity=qty,
-            unit_cost=cost,
-            total_cost=qty * cost,
-            source_module="INV",
+            description=f"Stock receipt - {items[rec_data['item']].description}",
+            quantity=Decimal(str(rec_data["qty"])),
+            unit_cost=Decimal(str(rec_data["cost"])),
+            total_cost=Decimal(str(rec_data["qty"])) * Decimal(str(rec_data["cost"])),
+            accounting_period_id=current_period.id,
             is_posted=True,
             posted_by=user.id,
-            posted_at=datetime.now() - timedelta(days=rec_data["days_ago"])
+            posted_at=datetime.now()
         )
-        db.add(inv_transaction)
+        db.add(receipt)
         
-        # Update item quantity on hand
-        item.quantity_on_hand += qty
+        # Update item quantity
+        items[rec_data["item"]].quantity_on_hand += Decimal(str(rec_data["qty"]))
     
     # Inventory Transactions: 2 Issues
     issue_data = [
@@ -751,30 +737,27 @@ def create_sample_transactions(db, company_id, users, accounts, customers, suppl
     ]
     
     for iss_data in issue_data:
-        item = items[iss_data["item"]]
-        qty = Decimal(str(iss_data["qty"]))
-        cost = Decimal(str(iss_data["cost"]))
+        trans_date = datetime.now() - timedelta(days=iss_data["days_ago"])
         
-        inv_transaction = InventoryTransaction(
+        issue = InventoryTransaction(
             company_id=company_id,
-            item_id=item.id,
+            item_id=items[iss_data["item"]].id,
             transaction_type_id=issue_type.id,
-            accounting_period_id=current_period.id,
-            transaction_date=date.today() - timedelta(days=iss_data["days_ago"]),
+            transaction_date=trans_date,
             reference_number=iss_data["ref"],
-            description=f"Issue of {item.description}",
-            quantity=qty,
-            unit_cost=cost,
-            total_cost=qty * cost,
-            source_module="INV",
+            description=f"Stock issue - {items[iss_data['item']].description}",
+            quantity=Decimal(str(iss_data["qty"])),
+            unit_cost=Decimal(str(iss_data["cost"])),
+            total_cost=Decimal(str(iss_data["qty"])) * Decimal(str(iss_data["cost"])),
+            accounting_period_id=current_period.id,
             is_posted=True,
             posted_by=user.id,
-            posted_at=datetime.now() - timedelta(days=iss_data["days_ago"])
+            posted_at=datetime.now()
         )
-        db.add(inv_transaction)
+        db.add(issue)
         
-        # Update item quantity on hand
-        item.quantity_on_hand -= qty
+        # Update item quantity
+        items[iss_data["item"]].quantity_on_hand -= Decimal(str(iss_data["qty"]))
     
     db.commit()
     print("✅ Created all sample transactions:")
@@ -796,16 +779,15 @@ def create_aging_periods(db, company_id):
     
     aging_periods = []
     for period_data in aging_periods_data:
-        aging_period = AgeingPeriod(
+        period = AgeingPeriod(
             company_id=company_id,
-            period_name=period_data["name"],
+            name=period_data["name"],
             days_from=period_data["from"],
             days_to=period_data["to"],
-            sort_order=period_data["order"],
-            is_active=True
+            sort_order=period_data["order"]
         )
-        db.add(aging_period)
-        aging_periods.append(aging_period)
+        db.add(period)
+        aging_periods.append(period)
     
     db.commit()
     print(f"✅ Created {len(aging_periods)} aging periods")
@@ -837,7 +819,12 @@ def main():
     db = SessionLocal()
     
     try:
-        print_section("Creating Core Data")
+        # Check if database is already populated
+        company_count = db.query(Company).count()
+        if company_count > 0:
+            print("\n⚠️ Database already contains data!")
+            print("Please run cleanup_database.py first if you want to start fresh.")
+            return
         
         # Create company
         company = create_test_company(db)
@@ -850,8 +837,6 @@ def main():
         
         # Create chart of accounts
         accounts = create_chart_of_accounts(db, company.id)
-        
-        print_section("Creating Master Data")
         
         # Create customers
         customers = create_customers(db, company.id)
@@ -868,35 +853,24 @@ def main():
         # Create aging periods
         aging_periods = create_aging_periods(db, company.id)
         
-        print_section("Creating Sample Transactions")
-        
         # Create sample transactions
-        create_sample_transactions(
-            db, company.id, users, accounts, customers, suppliers, 
-            items, periods, ar_types, ap_types, inv_types
-        )
+        create_sample_transactions(db, company.id, users, accounts, customers, suppliers, items, periods, ar_types, ap_types, inv_types)
         
         print_section("Test Data Creation Complete")
-        print("🎉 SUCCESS! Comprehensive test data created successfully!")
-        print("\n📊 Summary:")
-        print(f"   • Company: {company.name}")
-        print(f"   • Users: {len(users)} with roles")
-        print(f"   • GL Accounts: {len(accounts)}")
-        print(f"   • Accounting Periods: {len(periods)}")
-        print(f"   • Customers: {len(customers)}")
-        print(f"   • Suppliers: {len(suppliers)}")
-        print(f"   • Inventory Items: {len(items)}")
-        print(f"   • Transaction Types: AR({len(ar_types)}), AP({len(ap_types)}), INV({len(inv_types)})")
-        print(f"   • Aging Periods: {len(aging_periods)}")
-        print("\n🔑 Ready to login with the credentials above!")
-        print("🎯 Perfect for testing inventory management capabilities!")
+        print("✅ All data has been successfully loaded into the database.")
+        print("\n🚀 You can now start the application and log in with the credentials above.")
         
     except Exception as e:
-        print(f"\n❌ ERROR: {str(e)}")
         db.rollback()
-        raise
+        print("\n❌ Error creating test data:")
+        print(str(e))
+        import traceback
+        traceback.print_exc()
+        return 1
     finally:
         db.close()
+    
+    return 0
 
 
 if __name__ == "__main__":

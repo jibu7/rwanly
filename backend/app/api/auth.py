@@ -62,7 +62,10 @@ def require_permission(permission: str):
 @router.post("/login", response_model=Token)
 async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     """Authenticate user and return access token"""
+    # Allow login by either username or email
     user = user_crud.get_by_username(db, username=form_data.username)
+    if not user:
+        user = user_crud.get_by_email(db, email=form_data.username)
     if not user or not verify_password(form_data.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
