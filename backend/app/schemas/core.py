@@ -637,40 +637,97 @@ class APAllocationResponse(APAllocationBase):
 class InventoryItemBase(BaseModel):
     item_code: str = Field(..., max_length=20)
     description: str = Field(..., max_length=200)
-    item_type: str = Field(..., pattern="^(STOCK|SERVICE)$")
+    item_type: str = Field(..., pattern="^(Stock|Service)$")
     unit_of_measure: str = Field(..., max_length=20)
-    cost_price: float = Field(0.00, ge=0)
-    selling_price: float = Field(0.00, ge=0)
-    costing_method: str = Field("WEIGHTED_AVERAGE", pattern="^WEIGHTED_AVERAGE$")
-    gl_asset_account_id: int
-    gl_expense_account_id: int
-    gl_revenue_account_id: int
+    cost_price: Optional[float] = Field(None, ge=0)
+    selling_price: Optional[float] = Field(None, ge=0)
+    costing_method: str = Field("WeightedAverage", pattern="^(WeightedAverage|FIFO|LIFO|StandardCost)$")
+    reorder_level: Optional[float] = Field(None, ge=0)
+    reorder_quantity: Optional[float] = Field(None, ge=0)
+    gl_account_inventory_id: Optional[int] = None  # Asset account
+    gl_account_sales_id: Optional[int] = None      # Revenue account  
+    gl_account_cogs_id: Optional[int] = None       # Expense account
     is_active: bool = True
 
 
-class InventoryItemCreate(InventoryItemBase):
-    company_id: int
+class InventoryItemCreate(BaseModel):
+    item_code: str = Field(..., max_length=20)
+    description: str = Field(..., max_length=200)
+    item_type: str = Field(..., pattern="^(Stock|Service)$")
+    unit_of_measure: str = Field(..., max_length=20)
+    cost_price: Optional[float] = Field(None, ge=0)
+    selling_price: Optional[float] = Field(None, ge=0)
+    costing_method: str = Field("WeightedAverage", pattern="^(WeightedAverage|FIFO|LIFO|StandardCost)$")
+    reorder_level: Optional[float] = Field(None, ge=0)
+    reorder_quantity: Optional[float] = Field(None, ge=0)
+    gl_account_inventory_id: Optional[int] = None
+    gl_account_sales_id: Optional[int] = None
+    gl_account_cogs_id: Optional[int] = None
+    is_active: bool = True
+    company_id: Optional[int] = None  # Will be set from current user
 
 
 class InventoryItemUpdate(BaseModel):
+    item_code: Optional[str] = Field(None, max_length=20)
     description: Optional[str] = Field(None, max_length=200)
+    item_type: Optional[str] = Field(None, pattern="^(Stock|Service)$")
     unit_of_measure: Optional[str] = Field(None, max_length=20)
     cost_price: Optional[float] = Field(None, ge=0)
     selling_price: Optional[float] = Field(None, ge=0)
-    gl_asset_account_id: Optional[int] = None
-    gl_expense_account_id: Optional[int] = None
-    gl_revenue_account_id: Optional[int] = None
+    costing_method: Optional[str] = Field(None, pattern="^(WeightedAverage|FIFO|LIFO|StandardCost)$")
+    reorder_level: Optional[float] = Field(None, ge=0)
+    reorder_quantity: Optional[float] = Field(None, ge=0)
+    gl_account_inventory_id: Optional[int] = None
+    gl_account_sales_id: Optional[int] = None
+    gl_account_cogs_id: Optional[int] = None
     is_active: Optional[bool] = None
 
 
-class InventoryItemResponse(InventoryItemBase):
+class InventoryItemResponse(BaseModel):
     id: int
     company_id: int
+    item_code: str
+    description: str
+    item_type: str
+    unit_of_measure: str
+    cost_price: Optional[float] = None
+    selling_price: Optional[float] = None
     quantity_on_hand: float
+    costing_method: str
+    reorder_level: Optional[float] = None
+    reorder_quantity: Optional[float] = None
+    gl_account_inventory_id: Optional[int] = None
+    gl_account_sales_id: Optional[int] = None
+    gl_account_cogs_id: Optional[int] = None
+    is_active: bool
     created_at: datetime
     
     class Config:
         from_attributes = True
+    
+    @classmethod
+    def from_orm(cls, obj):
+        # Map the database field names to frontend field names
+        data = {
+            'id': obj.id,
+            'company_id': obj.company_id,
+            'item_code': obj.item_code,
+            'description': obj.description,
+            'item_type': obj.item_type,
+            'unit_of_measure': obj.unit_of_measure,
+            'cost_price': float(obj.cost_price) if obj.cost_price is not None else None,
+            'selling_price': float(obj.selling_price) if obj.selling_price is not None else None,
+            'quantity_on_hand': float(obj.quantity_on_hand),
+            'costing_method': obj.costing_method,
+            'reorder_level': float(obj.reorder_level) if obj.reorder_level is not None else None,
+            'reorder_quantity': float(obj.reorder_quantity) if obj.reorder_quantity is not None else None,
+            'gl_account_inventory_id': obj.gl_asset_account_id,
+            'gl_account_sales_id': obj.gl_revenue_account_id,
+            'gl_account_cogs_id': obj.gl_expense_account_id,
+            'is_active': obj.is_active,
+            'created_at': obj.created_at,
+        }
+        return cls(**data)
 
 
 # Inventory Transaction Type Schemas

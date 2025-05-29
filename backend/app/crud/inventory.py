@@ -20,6 +20,11 @@ class InventoryItemCRUD:
     @staticmethod
     def create(db: Session, *, obj_in: InventoryItemCreate) -> InventoryItem:
         """Create a new inventory item"""
+        # Map frontend field names to backend field names
+        gl_asset_account_id = obj_in.gl_account_inventory_id
+        gl_expense_account_id = obj_in.gl_account_cogs_id  
+        gl_revenue_account_id = obj_in.gl_account_sales_id
+        
         db_obj = InventoryItem(
             company_id=obj_in.company_id,
             item_code=obj_in.item_code,
@@ -29,9 +34,11 @@ class InventoryItemCRUD:
             cost_price=obj_in.cost_price,
             selling_price=obj_in.selling_price,
             costing_method=obj_in.costing_method,
-            gl_asset_account_id=obj_in.gl_asset_account_id,
-            gl_expense_account_id=obj_in.gl_expense_account_id,
-            gl_revenue_account_id=obj_in.gl_revenue_account_id,
+            reorder_level=obj_in.reorder_level,
+            reorder_quantity=obj_in.reorder_quantity,
+            gl_asset_account_id=gl_asset_account_id,
+            gl_expense_account_id=gl_expense_account_id,
+            gl_revenue_account_id=gl_revenue_account_id,
             is_active=obj_in.is_active
         )
         db.add(db_obj)
@@ -67,6 +74,15 @@ class InventoryItemCRUD:
     ) -> InventoryItem:
         """Update an inventory item"""
         update_data = obj_in.model_dump(exclude_unset=True)
+        
+        # Map frontend field names to backend field names
+        if 'gl_account_inventory_id' in update_data:
+            update_data['gl_asset_account_id'] = update_data.pop('gl_account_inventory_id')
+        if 'gl_account_cogs_id' in update_data:
+            update_data['gl_expense_account_id'] = update_data.pop('gl_account_cogs_id')
+        if 'gl_account_sales_id' in update_data:
+            update_data['gl_revenue_account_id'] = update_data.pop('gl_account_sales_id')
+        
         for field, value in update_data.items():
             setattr(db_obj, field, value)
         db.add(db_obj)

@@ -403,15 +403,17 @@ class InventoryItem(Base):
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=False)
     item_code = Column(String(20), nullable=False, index=True)
     description = Column(String(200), nullable=False)
-    item_type = Column(String(50), nullable=False)  # STOCK, SERVICE
+    item_type = Column(String(50), nullable=False)  # Stock, Service
     unit_of_measure = Column(String(20), nullable=False)
-    cost_price = Column(DECIMAL(15, 2), default=0.00)
-    selling_price = Column(DECIMAL(15, 2), default=0.00)
+    cost_price = Column(DECIMAL(15, 2), nullable=True)
+    selling_price = Column(DECIMAL(15, 2), nullable=True)
     quantity_on_hand = Column(DECIMAL(15, 2), default=0.00)
-    costing_method = Column(String(20), default='WEIGHTED_AVERAGE')  # Only WEIGHTED_AVERAGE supported initially
-    gl_asset_account_id = Column(Integer, ForeignKey("gl_accounts.id"), nullable=False)  # Inventory Asset Account
-    gl_expense_account_id = Column(Integer, ForeignKey("gl_accounts.id"), nullable=False)  # COGS Account
-    gl_revenue_account_id = Column(Integer, ForeignKey("gl_accounts.id"), nullable=False)  # Sales Account
+    costing_method = Column(String(20), default='WeightedAverage')
+    reorder_level = Column(DECIMAL(15, 2), nullable=True)
+    reorder_quantity = Column(DECIMAL(15, 2), nullable=True)
+    gl_asset_account_id = Column(Integer, ForeignKey("gl_accounts.id"), nullable=True)  # Inventory Asset Account
+    gl_expense_account_id = Column(Integer, ForeignKey("gl_accounts.id"), nullable=True)  # COGS Account
+    gl_revenue_account_id = Column(Integer, ForeignKey("gl_accounts.id"), nullable=True)  # Sales Account
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
@@ -421,6 +423,31 @@ class InventoryItem(Base):
     gl_expense_account = relationship("GLAccount", foreign_keys=[gl_expense_account_id])
     gl_revenue_account = relationship("GLAccount", foreign_keys=[gl_revenue_account_id])
     transactions = relationship("InventoryTransaction", back_populates="item")
+    
+    # Property mappings for frontend compatibility
+    @property
+    def gl_account_inventory_id(self):
+        return self.gl_asset_account_id
+    
+    @gl_account_inventory_id.setter
+    def gl_account_inventory_id(self, value):
+        self.gl_asset_account_id = value
+    
+    @property
+    def gl_account_sales_id(self):
+        return self.gl_revenue_account_id
+    
+    @gl_account_sales_id.setter
+    def gl_account_sales_id(self, value):
+        self.gl_revenue_account_id = value
+    
+    @property
+    def gl_account_cogs_id(self):
+        return self.gl_expense_account_id
+    
+    @gl_account_cogs_id.setter
+    def gl_account_cogs_id(self, value):
+        self.gl_expense_account_id = value
 
 
 class InventoryTransactionType(Base):
