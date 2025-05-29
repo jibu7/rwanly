@@ -147,6 +147,10 @@ async def read_users_me(current_user: User = Depends(get_current_active_user), d
                     frontend_resource = 'accounts_receivable'
                 elif resource_part.startswith('ap') or resource_part == 'accounts_payable':
                     frontend_resource = 'accounts_payable'
+                    
+        # Special case for admin - always add inventory read permission if they have any inventory permission
+        if any('inventory' in p for p in permission_strings) and current_user.user_roles and current_user.user_roles[0].role.name == 'Administrator':
+            permissions.append({"resource": "inventory", "action": "read"})
         
         if frontend_resource and action:
             permissions.append({

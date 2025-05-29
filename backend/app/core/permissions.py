@@ -105,13 +105,6 @@ class Permissions:
     AP_TRANSACTION_POST = "ap:transaction:post"
     AP_REPORT_VIEW = "ap:report:view"
     
-    # Inventory Permissions (Future)
-    INV_ITEM_CREATE = "inv:item:create"
-    INV_ITEM_READ = "inv:item:read"
-    INV_ITEM_UPDATE = "inv:item:update"
-    INV_ADJUSTMENT_CREATE = "inv:adjustment:create"
-    INV_REPORT_VIEW = "inv:report:view"
-    
     # Inventory Permissions (REQ-INV-*)
     INV_ITEM_CREATE = "inventory_items:create"
     INV_ITEM_READ = "inventory_items:read"
@@ -127,6 +120,11 @@ class Permissions:
     INV_TRANSACTION_READ = "inventory_transactions:read"
     INV_TRANSACTION_UPDATE = "inventory_transactions:update"
     INV_TRANSACTION_POST = "inventory_transactions:post"
+    
+    INV_ADJUSTMENT_CREATE = "inventory_adjustments:create"
+    INV_ADJUSTMENT_READ = "inventory_adjustments:read"
+    INV_ADJUSTMENT_UPDATE = "inventory_adjustments:update"
+    INV_ADJUSTMENT_DELETE = "inventory_adjustments:delete"
     
     INV_REPORT_VIEW = "inventory_reports:read"
 
