@@ -16,6 +16,43 @@ class Company(Base):
     settings = Column(JSONB)  # Store company-specific settings
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
+    # Properties to flatten JSONB data for API responses
+    @property
+    def street_address(self):
+        return self.address.get("street_address") if self.address else None
+    
+    @property
+    def city(self):
+        return self.address.get("city") if self.address else None
+    
+    @property
+    def state(self):
+        return self.address.get("state") if self.address else None
+    
+    @property
+    def postal_code(self):
+        return self.address.get("postal_code") if self.address else None
+    
+    @property
+    def country(self):
+        return self.address.get("country") if self.address else None
+    
+    @property
+    def phone(self):
+        return self.contact_info.get("phone") if self.contact_info else None
+    
+    @property
+    def email(self):
+        return self.contact_info.get("email") if self.contact_info else None
+    
+    @property
+    def website(self):
+        return self.contact_info.get("website") if self.contact_info else None
+    
+    @property
+    def tax_id(self):
+        return self.contact_info.get("tax_id") if self.contact_info else None
+    
     # Relationships
     users = relationship("User", back_populates="company")
     accounting_periods = relationship("AccountingPeriod", back_populates="company")

@@ -41,8 +41,15 @@ class UserResponse(UserBase):
 # Company Schemas
 class CompanyBase(BaseModel):
     name: str = Field(..., max_length=255)
-    address: Optional[Dict[str, Any]] = None
-    contact_info: Optional[Dict[str, Any]] = None
+    street_address: Optional[str] = Field(None, max_length=255)
+    city: Optional[str] = Field(None, max_length=100)
+    state: Optional[str] = Field(None, max_length=100)
+    postal_code: Optional[str] = Field(None, max_length=20)
+    country: Optional[str] = Field(None, max_length=100)
+    phone: Optional[str] = Field(None, max_length=50)
+    email: Optional[str] = Field(None, max_length=255)
+    website: Optional[str] = Field(None, max_length=255)
+    tax_id: Optional[str] = Field(None, max_length=50)
     settings: Optional[Dict[str, Any]] = None
 
 
@@ -52,8 +59,15 @@ class CompanyCreate(CompanyBase):
 
 class CompanyUpdate(BaseModel):
     name: Optional[str] = Field(None, max_length=255)
-    address: Optional[Dict[str, Any]] = None
-    contact_info: Optional[Dict[str, Any]] = None
+    street_address: Optional[str] = Field(None, max_length=255)
+    city: Optional[str] = Field(None, max_length=100)
+    state: Optional[str] = Field(None, max_length=100)
+    postal_code: Optional[str] = Field(None, max_length=20)
+    country: Optional[str] = Field(None, max_length=100)
+    phone: Optional[str] = Field(None, max_length=50)
+    email: Optional[str] = Field(None, max_length=255)
+    website: Optional[str] = Field(None, max_length=255)
+    tax_id: Optional[str] = Field(None, max_length=50)
     settings: Optional[Dict[str, Any]] = None
 
 
@@ -792,11 +806,22 @@ class InventoryTransactionResponse(InventoryTransactionBase):
     posted_by: Optional[int] = None
     posted_at: Optional[datetime] = None
     created_at: datetime
-    
+
     # Related data
     item: Optional[InventoryItemResponse] = None
     transaction_type: Optional[InventoryTransactionTypeResponse] = None
-    
+
+    @field_validator('transaction_date', 'created_at', 'posted_at', mode='before')
+    @classmethod
+    def ensure_isoformat(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, str):
+            return v  # Assume already ISO
+        try:
+            return v.isoformat()
+        except Exception:
+            return None
     class Config:
         from_attributes = True
 

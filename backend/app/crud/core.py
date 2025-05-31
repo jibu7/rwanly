@@ -97,7 +97,33 @@ class CompanyCRUD:
         return db.query(Company).offset(skip).limit(limit).all()
     
     def create(self, db: Session, company_data: CompanyCreate) -> Company:
-        db_company = Company(**company_data.dict())
+        # Transform flat schema fields into JSONB structure
+        data_dict = company_data.dict()
+        
+        # Extract address fields
+        address = {
+            "street_address": data_dict.pop("street_address", None),
+            "city": data_dict.pop("city", None),
+            "state": data_dict.pop("state", None),
+            "postal_code": data_dict.pop("postal_code", None),
+            "country": data_dict.pop("country", None)
+        }
+        
+        # Extract contact info fields
+        contact_info = {
+            "phone": data_dict.pop("phone", None),
+            "email": data_dict.pop("email", None),
+            "website": data_dict.pop("website", None),
+            "tax_id": data_dict.pop("tax_id", None)
+        }
+        
+        # Create company with JSONB structure
+        db_company = Company(
+            name=data_dict["name"],
+            address=address,
+            contact_info=contact_info,
+            settings=data_dict.get("settings")
+        )
         db.add(db_company)
         db.commit()
         db.refresh(db_company)
@@ -108,9 +134,32 @@ class CompanyCRUD:
         if not db_company:
             return None
         
-        update_data = company_data.dict(exclude_unset=True)
-        for field, value in update_data.items():
-            setattr(db_company, field, value)
+        # Transform flat schema fields into JSONB structure
+        data_dict = company_data.dict(exclude_unset=True)
+        
+        # Update name if provided
+        if "name" in data_dict:
+            db_company.name = data_dict["name"]
+        
+        # Update address fields
+        address_fields = ["street_address", "city", "state", "postal_code", "country"]
+        address_updates = {field: data_dict.pop(field, None) for field in address_fields if field in data_dict}
+        if address_updates:
+            current_address = db_company.address or {}
+            current_address.update({k: v for k, v in address_updates.items() if v is not None})
+            db_company.address = current_address
+        
+        # Update contact info fields
+        contact_fields = ["phone", "email", "website", "tax_id"]
+        contact_updates = {field: data_dict.pop(field, None) for field in contact_fields if field in data_dict}
+        if contact_updates:
+            current_contact = db_company.contact_info or {}
+            current_contact.update({k: v for k, v in contact_updates.items() if v is not None})
+            db_company.contact_info = current_contact
+        
+        # Update settings if provided
+        if "settings" in data_dict:
+            db_company.settings = data_dict["settings"]
         
         db.commit()
         db.refresh(db_company)

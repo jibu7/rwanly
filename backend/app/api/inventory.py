@@ -8,9 +8,10 @@ from app.api.auth import get_current_active_user, require_permission
 from app.models.core import User, InventoryItem, InventoryTransactionType, GLAccount
 from app.schemas.core import (
     InventoryItemCreate, InventoryItemUpdate, InventoryItemResponse,
-    InventoryTransactionTypeCreate, InventoryTransactionTypeResponse
+    InventoryTransactionTypeCreate, InventoryTransactionTypeResponse,
+    InventoryTransactionCreate, InventoryTransactionResponse
 )
-from app.crud.inventory import InventoryItemCRUD, InventoryTransactionTypeCRUD
+from app.crud.inventory import InventoryItemCRUD, InventoryTransactionTypeCRUD, InventoryTransactionCRUD
 from app.core.permissions import Permissions
 
 router = APIRouter()
@@ -215,16 +216,35 @@ def get_transaction_type(
 
 
 # Transaction Endpoints
-@router.get("/transactions", response_model=List[dict])
-def list_transactions(
+# Transaction Endpoints
+
+# === Inventory Adjustments Endpoints ===
+@router.get("/adjustments", response_model=List[InventoryTransactionResponse])
+def list_inventory_adjustments(
     *,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(Permissions.INV_TRANSACTION_READ)),
+    current_user: User = Depends(require_permission(Permissions.INV_ADJUSTMENT_READ)),
     skip: int = 0,
     limit: int = 100
-) -> List[dict]:
-    """List inventory transactions - simplified version"""
-    return []
+) -> List[InventoryTransactionResponse]:
+    """List inventory adjustments (transactions) for the current company"""
+    return InventoryTransactionCRUD.get_multi(
+        db, company_id=current_user.company_id, skip=skip, limit=limit
+    )
+
+
+@router.post("/adjustments", response_model=InventoryTransactionResponse)
+def create_inventory_adjustment(
+    *,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission(Permissions.INV_ADJUSTMENT_CREATE)),
+    adjustment_in: InventoryTransactionCreate
+) -> InventoryTransactionResponse:
+    """Create a new inventory adjustment (transaction)"""
+    # Ensure the adjustment is for the current company
+    if adjustment_in.company_id != current_user.company_id:
+        raise HTTPException(status_code=403, detail="Invalid company context")
+    return InventoryTransactionCRUD.create(db, obj_in=adjustment_in)
 
 
 # Reports Endpoints
